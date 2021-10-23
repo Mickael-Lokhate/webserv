@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+
+  php:
+    image: php:8-fpm
+    container_name: php_c
+    volumes:
+      - dynamic-site_data:/var/www/dynamic-site.42.fr
+    networks:
+      - webserv_network
+    restart : on-failure
+
+  nginx:
+    depends_on:
+      - php
+    image: nginx:1.20.1
+    container_name: nginx_c
+    volumes:
+      - ${NGINX_DIR}/conf/nginx.conf:/etc/nginx/nginx.conf
+      - site_conf:/etc/nginx/conf.d
+      - nginx_log:/var/log/nginx
+      - static-site_data:/var/www/static-site.42.fr
+      - dynamic-site_data:/var/www/dynamic-site.42.fr
+    ports:
+        - "80:80"
+    networks:
+      - webserv_network
+    restart : on-failure
+
+volumes:
+
+  static-site_data:
+    name : "static-site_data"
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "${DATA_PATH}/www/static-site.42.fr"
+
+  dynamic-site_data:
+    name : "dynamic-site_data"
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "${DATA_PATH}/www/dynamic-site.42.fr"
+
+  site_conf:
+    name : "site_conf"
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "${NGINX_DIR}/conf/conf.d"
+  
+  nginx_log:
+    name : "nginx_log"
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "${LOG_PATH}/nginx"
+
+networks:
+
+  webserv_network:
+    name: "webserv_network"
