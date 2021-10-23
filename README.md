@@ -14,4 +14,5 @@
 ### joker
 - [ ] écrire mini-serv en C++ 
 - coder les micro-problemes :
-  - [ ] ...
+  - [ ] récupérer les dates systé au format RFC 822 (https://datatracker.ietf.org/doc/html/rfc2616#section-3.3)
+  - [ ] 
