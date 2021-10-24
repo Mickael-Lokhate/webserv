@@ -2,4 +2,4 @@
 .*.swp
 .*.swn
 .*.swm
-./test/log/*/*
+*.log
