@@ -16,6 +16,7 @@
 - coder les micro-problemes :
   - [ ] récupérer les dates système au format RFC 822 (https://datatracker.ietf.org/doc/html/rfc2616#section-3.3)
   - [ ] générer les headers nécessaires au bon fonctionnement de l'antémémoire (ETag, Last-modified..)
+  - [ ] définir et écrire l'algorithme associé au bloc de configuration location
 
 ### TODO
   - [ ] gérer les différents charset définit dans les normes ISO-8859-1 a ISO-8859-9
