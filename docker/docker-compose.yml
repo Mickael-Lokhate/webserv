@@ -9,7 +9,7 @@ services:
       - dynamic-site_data:/var/www/dynamic-site.42.fr
     networks:
       - webserv_network
-    restart : on-failure
+    restart : always
 
   nginx:
     depends_on:
@@ -26,7 +26,7 @@ services:
         - "80:80"
     networks:
       - webserv_network
-    restart : on-failure
+    restart : always
 
 volumes:
 
