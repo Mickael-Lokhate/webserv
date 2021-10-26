@@ -14,7 +14,7 @@ services:
   nginx:
     depends_on:
       - php
-    image: nginx:1.20.1
+    build: nginx
     container_name: nginx_c
     volumes:
       - ${NGINX_DIR}/conf/nginx.conf:/etc/nginx/nginx.conf
