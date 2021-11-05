@@ -22,6 +22,9 @@ services:
       - nginx_log:/var/log/nginx
       - static-site_data:/var/www/static-site.42.fr
       - dynamic-site_data:/var/www/dynamic-site.42.fr
+      - YoupiBanane_data:/var/www/YoupiBanane
+      - upload_data:/upload
+      - cgi:/cgi
     ports:
         - "80:80"
     networks:
@@ -37,6 +40,22 @@ volumes:
       type: "none"
       o: "bind"
       device: "${DATA_PATH}/www/static-site.42.fr"
+
+  YoupiBanane_data:
+    name : "YoupiBanane_data"
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "${DATA_PATH}/www/YoupiBanane"
+
+  upload_data:
+    name : "upload_data"
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "${DATA_PATH}/upload"
 
   dynamic-site_data:
     name : "dynamic-site_data"
@@ -61,6 +80,15 @@ volumes:
       type: "none"
       o: "bind"
       device: "${LOG_PATH}/nginx"
+
+  cgi:
+    name : "cgi"
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "${NGINX_DIR}/cgi"
+
 
 networks:
 

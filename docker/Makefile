@@ -17,13 +17,14 @@ NB_I = $$($(_I) | wc -l)
 NB_V = $$($(_V) | wc -l)
 NB_N = $$($(_N) | wc -l)
 
-clean	: SHELL:=/bin/bash
-fclean	: SHELL:=/bin/bash
-all	: SHELL:=/bin/bash
-up	: SHELL:=/bin/bash
-build	: SHELL:=/bin/bash
+clean		: SHELL:=/bin/bash
+fclean		: SHELL:=/bin/bash
+all			: SHELL:=/bin/bash
+up			: SHELL:=/bin/bash
+build		: SHELL:=/bin/bash
+logclean	: SHELL:=/bin/bash
 
-all     : clean up
+all     : clean logclean up
 
 
 up     	:
@@ -42,9 +43,14 @@ clean   :
 	@$(call print,"- Clean networks")
 	@[ $(NB_N) -ne 0 ] && docker network rm $$($(_N)) 2> /dev/null ; true
 
-fclean  : clean
+fclean	: clean
 	@$(call print,"- Clean images")
 	@[ $(NB_I) -ne 0 ] && docker rmi -f $$($(_I)); true
+
+logclean :
+	@$(call print,"- Clean logs")
+	@rm -rf log/nginx/* ; true
+
 
 re	: fclean all
 
