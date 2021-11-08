@@ -4,9 +4,6 @@ echo ""
 now="$(date)"
 echo '<html><head><title>Hello World - CGI app</title></head>'
 echo '<body>'
- 
-echo '<h2>Hello World!</h2>'
-echo "Computer name : $HOSTNAME<br/>"
-echo "The current date and time : ${now}<br/>"
+env
 echo '</body>'
 echo '</html>'
