@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+echo "Content-type: text/html"
+echo ""
+now="$(date)"
+echo '<html><head><title>Hello World - CGI app</title></head>'
+echo '<body>'
+echo $now
+echo '<br>'
+echo '<pre>'
+env
+echo '</pre>'
+echo '</body>'
+echo '</html>'
