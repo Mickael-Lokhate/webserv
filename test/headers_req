@@ -1,0 +1,6 @@
+Accept-Encoding: gzip
+Content-Type: test/file
+Host: localhost:8000
+Transfer-Encoding: chunked
+User-Agent: Go-http-client/1.1
+X-Secret-Header-For-Test: 1

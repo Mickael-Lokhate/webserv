@@ -31,20 +31,20 @@ services:
       - webserv_network
     restart : always
 
-  httpd:
-    depends_on:
-      - nginx
-    build: httpd
-    container_name: httpd_c
-    volumes:
-      - ./httpd/httpd.conf:/usr/local/apache2/conf/httpd.conf
-      - cgi:/usr/local/apache2/cgi-bin
-      - YoupiBanane_data:/usr/local/apache2/htdocs/
-    ports:
-        - "8080:80"
-    networks:
-      - webserv_network
-    restart : always
+    #  httpd:
+    #    depends_on:
+    #      - nginx
+    #    build: httpd
+    #    container_name: httpd_c
+    #    volumes:
+    #      - ./httpd/httpd.conf:/usr/local/apache2/conf/httpd.conf
+    #      - cgi:/usr/local/apache2/cgi-bin
+    #      - YoupiBanane_data:/usr/local/apache2/htdocs/
+    #    ports:
+    #        - "8080:80"
+    #    networks:
+    #      - webserv_network
+    #    restart : always
 
 
 volumes:
