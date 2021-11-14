@@ -1,10 +1,9 @@
 ## Accept-Charsets 
-	- Def : Indique le jeu de caractères que le client est capable de comprendre.
-	- Comp. :
-		- sdsdsd
-	- Cat. : Request Header
-	- synt. :
-	- Ex. : Accept-Charset: utf-8, iso-8859-1;q=0.5
+	Def : Indique le jeu de caractères que le client est capable de comprendre.
+	Comp. : -
+	Cat. : Request Header
+	synt. :
+	Ex. : Accept-Charset: utf-8, iso-8859-1;q=0.5
 
 # Accept-Language 
 	Déf : Indique quelles sont les langues que le client est capable de comprendre, et quelle variante locale est préférée.

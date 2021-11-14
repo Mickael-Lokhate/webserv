@@ -1,0 +1,25 @@
+AUTH_TYPE
+CONTENT_LENGTH
+CONTENT_TYPE
+GATEWAY_INTERFACE
+PATH_INFO
+PATH_TRANSLATED
+QUERY_STRING
+REMOTE_ADDR
+REMOTE_IDENT
+REMOTE_USER
+REQUEST_METHOD
+REQUEST_URI
+SCRIPT_NAME
+SERVER_NAME
+SERVER_PORT
+SERVER_PROTOCOL
+SERVER_SOFTWARE
+
+bonus ?
+HTTP_COOKIE
+
+see
+http://nginx.org/en/docs/varindex.html
+https://fr.wikipedia.org/wiki/Variables_d%27environnement_CGI
+https://datatracker.ietf.org/doc/html/rfc3875

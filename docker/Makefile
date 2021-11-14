@@ -49,6 +49,7 @@ fclean	: clean
 
 logclean :
 	@$(call print,"- Clean logs")
+	@echo 'log/nginx/*'
 	@rm -rf log/nginx/* ; true
 
 
