@@ -44,9 +44,8 @@ Other test
 
 ## resume headers response
 
-- Accept-Ranges: bytes
-- Connection: close
-- Connection: keep-alive
+- ? Connection: close
+- ? Connection: keep-alive
 - Content-Length: 153
 - Content-Type: application/octet-stream
 - Content-Type: text/html
