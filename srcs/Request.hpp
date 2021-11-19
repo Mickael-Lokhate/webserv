@@ -1,15 +1,20 @@
 #pragma once
 #include <string>
-struct Request {
+#include <map>
 
-	Request(const std::string &, const std::string &, const std::string &);
+class Request {
+
+	public:
+
+	Request_line						req_line;
+	std::map<std::string, std::string>	headers;
+	std::string 						body;
+
+	Request(Request_line & req_line,
+			const std::map<std::string, std::string> & headers,
+			const std::string & body);
 	Request(const Request &);
 	~Request(void);
-	Request & operator=(const Request &);
-
-	what(void) const;
-
-	std::string req_line;
-	map<std::string, std::string> headers;
-	std::string body;
+	Request & operator=(const Request & ref);
+	void what(void) const;
 };

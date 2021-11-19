@@ -1,13 +1,15 @@
-#include "worker.hpp"
+#include "Worker.hpp"
+#include <map>
+#include <vector>
 #include <algorithm>
 
 template<class T>
 void gwhat(T & obj) { obj.what(); }
 
-Worker::Worker(const vector<Server> & server_list,
-		const map<Socket, Server> & socket_list) :
-	r(server_list),
-	s(socket_list)
+Worker(const std::vector<Server> & servers,
+		const std::map<int, Socket_server> & socket_servers) :
+	_socket_servers(socket_servers),
+	_servers(servers)
 {
 #ifdef DEBUG
 	std::cout << "[Worker] - Constructor param" << std::endl;

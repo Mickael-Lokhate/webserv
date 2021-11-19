@@ -3,7 +3,7 @@
 #include <iostream>
 #include <arpa/inet.h>
 
-struct Socket_server {
+class Socket_server {
 
 	public:
 		int fd;

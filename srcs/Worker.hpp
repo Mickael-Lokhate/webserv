@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <map>
+#include <vector>
 /*
 		+---------------------------------------------------------------------+
 		|                                                                     |
@@ -52,14 +54,20 @@
 		|               +---------------------------------------------------+ |
 		+---------------------------------------------------------------------++
 */
+
+#include "Socket_client.hpp"
+#include "Socket_server.hpp"
+#include "Server.hpp"
+
 class Worker {
 
 	public:
 
-	Worker(const vector<Server> &, const map<Socket, Server> &);
-	Worker(const Worker &);
+	Worker(const std::vector<Server> & servers,
+			const std::map<int, Socket_server> & socket_servers);
+	Worker(const Worker & ref);
 	~Worker(void);
-	Worker & operator=(const Worker &);
+	Worker & operator=(const Worker & right);
 
 	void event_loop(void);
 	void what(void) const;
@@ -67,11 +75,12 @@ class Worker {
 	private:
 
 	void new_client(int socket);
-	void recv_client(const Client &);
-	void send_client(const Client &);
-	void del_client(const Client &);
+	void recv_client(const Socket_client & c);
+	void send_client(const Socket_client & c);
+	void del_client(const Socket_client & c);
+	
+	std::map<int, Socket_client>	_socket_clients;
+	std::map<int, Socket_server>	_socket_servers;
+	const std::vector<Server>		_servers;
 
-	map<int, Client>			c;
-	const vector<Server> & 		r;
-	const map<Socket, Server> &	s;
 };
