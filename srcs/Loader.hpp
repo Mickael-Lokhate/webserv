@@ -11,7 +11,7 @@ public:
 	~Loader(void);
 	Loader(const Loader& cpy);
 
-	void	to_string(void);
+	void	what(void) const;
 	void	add_servers(std::vector<Server> *servers);
 
 	Loader&	operator=(const Loader& rhs);

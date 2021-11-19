@@ -43,3 +43,10 @@ void	Loader::_parse_server(Server *new_server)
 	// Setup les attributs de new_route_conf avec les valeurs du fichier de conf ou NULL 
 	new_server->add_route(new_route_conf);
 }
+
+void	Loader::what(void) const
+{
+	std::cout << "Loader content : " << std::endl;
+	std::cout << _config_file << std::endl;
+}
+
