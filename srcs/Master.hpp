@@ -10,15 +10,15 @@ class Master {
 		static const std::string _DEFAULT_CONF;
 		std::string _file_conf;
 		vector<Server> _servers;
-		vector<Socket_server> _socket_servers;
+		vector<Socket_server> _sockets_servers;
 
 	public:
 		Master(std::string const & file_config);
 		void init();
 		void work();
-		std:string const & to_string();
+		void what();
 	private:
-		void _listen(Socket_server ss) throw ;
-		std::stringstream const & _print_server;
-
+		void _listen(Socket_server ss);
+		template<class T>
+		void _what(T elmt);
 };
