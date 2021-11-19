@@ -17,4 +17,8 @@ private:
 	std::string _autoindex;
 	std::string _max_body_size;
 	std::vector<Route> _routes;
+public:
+	Default_server();
+	~Default_server();
+	void what() const;
 };

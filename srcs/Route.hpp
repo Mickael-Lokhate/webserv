@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include "Route.hpp"
+#include "route_conf.hpp"
 
 class Route
 {
@@ -16,8 +17,10 @@ private:
 	std::string _return;
 	std::string _ext;
 
-	
 public:
-	Route();
+	Route(t_route_conf conf);
 	~Route();
+	void what() const;
+
+	// setter/getter
 };
