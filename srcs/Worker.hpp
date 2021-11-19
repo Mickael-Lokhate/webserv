@@ -1,5 +1,4 @@
-#ifndef WORKER_HPP
-#define WORKER_HPP
+#pragma once
 /*
 		+---------------------------------------------------------------------+
 		|                                                                     |
@@ -86,4 +85,3 @@ class Worker {
 	const vector<Server> & 		r;
 	const map<Socket, Server> &	s;
 };
-#endif
