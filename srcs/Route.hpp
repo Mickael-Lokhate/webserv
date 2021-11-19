@@ -2,23 +2,28 @@
 
 #include <string>
 #include <iostream>
+#include <map>
+#include <vector>
 #include "Route.hpp"
 #include "route_conf.hpp"
 
 class Route
 {
-private:
-	std::string _root;
-	std::string _autoindex;
-	std::string _max_body_size;
-	std::string _location;
-	std::string _alias;
-	std::string _limit_except;
-	std::string _return;
-	std::string _ext;
+public:
+	std::pair<std::string, bool> root;
+	std::string autoindex;
+	std::string max_body_size;
+	std::string location;
+	std::string limit_except;
+	std::map<std::string, std::string> error_page;
+	std::string return_;
+	std::string ext;
+	std::vector<std::string> index;
+	std::string cgi;
+	std::string upload;
 
 public:
-	Route(t_route_conf conf);
+	Route();
 	~Route();
 	void what() const;
 

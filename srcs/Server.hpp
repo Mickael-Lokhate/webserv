@@ -5,30 +5,24 @@
 #include <map>
 #include <vector>
 #include "Route.hpp"
+#include "Request.hpp"
 #include "route_conf.hpp"
-#include "Default_server.hpp"
 
-class Server : public Default_server
+class Server
 {
-private:
-	std::string			_address;
-	std::string			_port;
-	std::string			_server_name;
-	std::map<std::string, std::string> _error_page;
-	std::string			_root;
-	std::string			_autoindex;
-	std::string			_max_body_size;
-	std::vector<Route>	_routes;
-	Route				_default_route;
+public:
+	std::string			address;
+	std::string			port;
+	std::string			server_name;
+	std::vector<Route>	routes;
 	
 public:
 	Server();
 	~Server();
 
-	void add_route(t_route_conf conf);
-	Route choose_route(std::string uri, std::string ext = NULL);
+	void add_route(const Route & route);
+	Route choose_route(const Request & req);
 	void what() const;
-
 
 	// setter/getter
 };

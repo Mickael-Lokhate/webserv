@@ -1,6 +1,6 @@
 #include "Route.hpp"
 
-Route::Route(t_route_conf conf)
+Route::Route()
 {
 	// Use conf to setup default attributes
 	;
