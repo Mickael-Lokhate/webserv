@@ -3,7 +3,6 @@
 Loader::Loader(std::vector<Server> *servers, std::ifstream& config) : _config_file(config)
 {
 	std::cout << "Loader start" << std::endl;
-	_parse_config(servers);
 }
 
 Loader::Loader(const Loader& cpy)
@@ -21,19 +20,20 @@ Loader&	Loader::operator=(const Loader& rhs)
 	std::cout << "Assignation of a Loader" << std::endl;
 }
 
+void	Loader::add_servers(std::vector<Servers> *servers)
+{
+	std::cout << "Adding a server..." << std::endl;
+	_parse_config(servers);
+	// Creer un nouvel objet Server
+	// Appel _parse_server pour initialiser le nouveau server
+	// Ajout du nouveau Server au vecteur
+}
+
 void	Loader::_parse_config(std::vector<Servers> *servers)
 {
 	std::cout << "Configuration parsing start" << std::endl;
 	// Parse le fichier de config
 	// Appel _add_server quand on rencontre un nouveau server
-}
-
-void	Loader::_add_server(std::vector<Servers> *servers)
-{
-	std::cout << "Adding a server..." << std::endl;
-	// Creer un nouvel objet Server
-	// Appel _parse_server pour initialiser le nouveau server
-	// Ajout du nouveau Server au vecteur
 }
 
 void	Loader::_parse_server(Server *new_server)

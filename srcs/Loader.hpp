@@ -7,11 +7,12 @@
 class Loader {
 
 public:
-	Loader(std::vector<Server> *servers, std::ifstream& config);
+	Loader(std::ifstream& config);
 	~Loader(void);
 	Loader(const Loader& cpy);
 
 	void	to_string(void);
+	void	add_servers(std::vector<Server> *servers);
 
 	Loader&	operator=(const Loader& rhs);
 private:
@@ -19,7 +20,6 @@ private:
 
 	Loader(void);
 	void	_parse_config(std::vector<Server> *servers);
-	void	_add_server(std::vector<Server> *servers);
 	void	_parse_server(Server *new_server);
 }
 
