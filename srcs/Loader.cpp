@@ -1,4 +1,4 @@
-#include "Loader.hpp:"
+#include "Loader.hpp"
 
 Loader::Loader(std::vector<Server> *servers, std::ifstream& config) : _config_file(config)
 {
