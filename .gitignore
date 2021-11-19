@@ -3,5 +3,7 @@
 .*.swn
 .*.swm
 *.log
-docker/data/upload/*
-!.keep
+/docker
+/test
+/resources
+README.md
