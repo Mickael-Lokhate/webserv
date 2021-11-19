@@ -8,18 +8,18 @@
 class Loader {
 
 public:
-	Loader(std::ifstream& config);
+	Loader(std::ifstream & config);
 	~Loader(void);
 
 	void	what(void) const;
-	void	add_servers(std::vector<Server> *servers);
-	void	create_route(Server *server);
+	void	add_servers(std::vector<Server> & servers);
+	void	create_route(Server & server);
 
 private:
-	std::ifstream	_config_file; 
+	std::ifstream & _config_file; 
 
 	Loader(void);
-	void	_parse_config(std::vector<Server> *servers);
-	void	_parse_server(Server *new_server);
+	void	_parse_config(std::vector<Server> & servers);
+	void	_parse_server(Server & new_server);
 };
 

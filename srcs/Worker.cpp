@@ -1,13 +1,11 @@
 #include "Worker.hpp"
 #include <map>
 #include <vector>
-#include <algorithm>
 
 template<class T>
 void gwhat(T & obj) { obj.what(); }
 
-Worker(const std::vector<Server> & servers,
-		const std::map<int, Socket_server> & socket_servers) :
+Worker::Worker(const std::vector<Server> & servers, const std::map<int, Socket_server> & socket_servers) :
 	_socket_servers(socket_servers),
 	_servers(servers)
 {
@@ -21,7 +19,7 @@ Worker::Worker(const Worker & ref)
 #ifdef DEBUG
 	std::cout << "[Worker] - Constructor copy" << std::endl;
 #endif
-	*this = ref
+	*this = ref;
 }
 
 Worker::~Worker(void)
@@ -31,13 +29,14 @@ Worker::~Worker(void)
 #endif
 }
 
-Worker & Worker::operator=(const Worker & right) :
-	r(right.r),
-	s(right.s)
+Worker & Worker::operator=(const Worker & right) 
 {
+	_socket_clients = right._socket_clients;
+	_socket_servers = right._socket_servers;
 #ifdef DEBUG
 	std::cout << "[Worker] - operator=" << std::endl;
 #endif
+	return *this;
 }
 
 void Worker::event_loop(void)
@@ -47,6 +46,6 @@ void Worker::event_loop(void)
 
 void Worker::what(void) const
 {
-	foreach(r.begin(), r.end(), gwhat);
-	foreach(s.begin(), s.end(), gwhat);
+	//for_each(_socket_clients.begin(), _socket_clients.end(), gwhat);
+	//for_each(_socket_servers.begin(), _socket_servers.end(), gwhat);
 }

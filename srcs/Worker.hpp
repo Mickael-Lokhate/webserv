@@ -2,6 +2,8 @@
 #include <string>
 #include <map>
 #include <vector>
+#include "Socket_server.hpp"
+#include "Socket_client.hpp"
 /*
 		+---------------------------------------------------------------------+
 		|                                                                     |

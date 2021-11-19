@@ -1,6 +1,6 @@
 #include "Server.hpp"
 
-Server::Server() : Default_server()
+Server::Server() 
 {
 	;
 }
@@ -10,7 +10,7 @@ Server::~Server()
 	;
 }
 
-void	add_route(t_route_conf conf)
+void	add_route(const Route & conf)
 {
 	// Create a t_route_conf $conf_serv based on Server attributes
 	// Instanciate a route object with $conf_serv
@@ -19,7 +19,7 @@ void	add_route(t_route_conf conf)
 	;
 }
 
-Route	Server::choose_route(std::string uri, std::string ext)
+Route	Server::choose_route(const Request & req)
 {
 	// Iterate through routes and wait for the LONGEST uri match paired with the right ext
 	// if found return the route

@@ -5,6 +5,8 @@
 #include <vector>
 #include "Socket_server.hpp"
 #include "Server.hpp"
+#include "Loader.hpp"
+#include "Worker.hpp"
 
 class Master {
 	private:

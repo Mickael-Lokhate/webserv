@@ -2,15 +2,16 @@
 #include <string>
 #include <map>
 
+
 class Request {
 
 	public:
 
-	Request_line						req_line;
+	std::string						req_line;
 	std::map<std::string, std::string>	headers;
 	std::string 						body;
 
-	Request(Request_line & req_line,
+	Request(std::string & req_line,
 			const std::map<std::string, std::string> & headers,
 			const std::string & body);
 	Request(const Request &);
