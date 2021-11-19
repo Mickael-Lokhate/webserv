@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 /*
 		+---------------------------------------------------------------------+
 		|                                                                     |
@@ -58,11 +59,16 @@ class Worker {
 	class Client {
 
 		public :
+		Client(const std::string &, const std::string &);
+		Client(const Client &);
+		~Client(void);
+		Client & operator=(const Client &);
 
 		/* parser */
 		void build_request(const std::string &);
 		/* builder */
 		void build_response(void);
+		void what(void) const;
 
 		private :
 
@@ -70,13 +76,17 @@ class Worker {
 		std::string rep;
 	};
 
-	Worker(const Server &, const Socket &);
+	Worker(const vector<Server> &, const map<Socket, Server> &);
+	Worker(const Worker &);
+	~Worker(void);
+	Worker & operator=(const Worker &);
+
 	void event_loop(void);
-	void to_string(void) const;
+	void what(void) const;
 
 	private:
 
-	void new_client(void);
+	void new_client(int socket);
 	void recv_client(const Client &);
 	void send_client(const Client &);
 	void del_client(const Client &);
