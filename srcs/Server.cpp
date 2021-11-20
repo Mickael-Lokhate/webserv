@@ -10,7 +10,7 @@ Server::~Server()
 	;
 }
 
-void	add_route(const Route & conf)
+void	Server::add_route(const Route & conf)
 {
 	// Create a t_route_conf $conf_serv based on Server attributes
 	// Instanciate a route object with $conf_serv
