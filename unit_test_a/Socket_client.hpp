@@ -6,10 +6,11 @@ class Socket_client {
 	public:
 
 	int			fd;
-	std::string buffer_req;
+	std::string buff;
 	std::string addr;
 	std::string port;
 
+	Socket_client(void);
 	Socket_client(int fd, const std::string & addr, 
 					const std::string & port);
 	Socket_client(const Socket_client & ref);

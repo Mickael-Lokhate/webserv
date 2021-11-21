@@ -13,24 +13,15 @@ void gwhat(T & obj) { obj.what(); }
 Worker::Worker(const std::map<int, Socket_server> & socket_servers) :
 	_socket_servers(socket_servers)
 {
-#ifdef DEBUG
-	std::cout << "[Worker] - Constructor param" << std::endl;
-#endif
 }
 
 Worker::Worker(const Worker & ref)
 {
-#ifdef DEBUG
-	std::cout << "[Worker] - Constructor copy" << std::endl;
-#endif
 	*this = ref;
 }
 
 Worker::~Worker(void)
 {
-#ifdef DEBUG
-	std::cout << "[Worker] - Destructor" << std::endl;
-#endif
 }
 
 Worker & Worker::operator=(const Worker & right) 
@@ -81,12 +72,23 @@ void Worker::new_client(int kq, struct kevent & event)
 		_socket_clients.insert(std::make_pair(new_client,
 						Socket_client(new_client, buffer,
 						std::to_string(htons(from.sin_port)))));
+#ifdef DEBUG
 		_socket_clients.find(new_client)->second.what();
+#endif
 	}
 }
 
 void Worker::recv_client(int kq, struct kevent & event)
 {
+	char buffer[event.data+1];
+	bzero(buffer, event.data+1);
+#ifdef DEBUG
+	std::cout << "[Worker] - réception client" << std::endl;
+#endif 
+	std::cout << event.data << " bytes to read" << std::endl;
+	read(event.ident, buffer, event.data);
+	_socket_clients[event.ident].buff += buffer;
+	std::cerr << buffer;
 }
 
 void Worker::send_client(int kq, struct kevent & event)

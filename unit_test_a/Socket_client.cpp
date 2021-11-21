@@ -1,6 +1,10 @@
 #include <iostream>
 #include "Socket_client.hpp"
 
+Socket_client::Socket_client(void)
+{
+}
+
 Socket_client::Socket_client(int fd, const std::string & addr, 
 								const std::string & port) :
 	fd(fd),
