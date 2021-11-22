@@ -1,7 +1,22 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Worker.hpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: aclerac <marvin@42.fr>                     +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2021/11/22 15:45:49 by aclerac           #+#    #+#             */
+/*   Updated: 2021/11/22 17:07:14 by aclerac          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #pragma once
 #include <string>
 #include <map>
 #include <vector>
+#include <sys/types.h>
+#include <sys/event.h>
+#include <sys/time.h>
 #include "Socket_server.hpp"
 #include "Socket_client.hpp"
 #define MAX_EVENTS 1024
@@ -20,11 +35,13 @@ class Worker {
 
 	private:
 
-	void new_client(int kq, struct kevent & event);
-	void recv_client(int kq, struct kevent & event);
-	void send_client(int kq, struct kevent & event);
-	void del_client(int kq, struct kevent & event);
+	void new_client(int i);
+	void recv_client(int i);
+	void send_client(int i);
+	void del_client(int i);
 	
+	std::vector<struct kevent>		event_list;
+	std::vector<struct kevent>		modif_list;
 	std::map<int, Socket_client>	_socket_clients;
 	std::map<int, Socket_server>	_socket_servers;
 
