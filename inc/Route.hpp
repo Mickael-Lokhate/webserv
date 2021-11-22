@@ -23,7 +23,5 @@ public:
 public:
 	Route();
 	~Route();
-	void what() const;
-
-	// setter/getter
+	void what();
 };

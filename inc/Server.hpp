@@ -4,8 +4,8 @@
 #include <iostream>
 #include <map>
 #include <vector>
-#include "Route.hpp"
-#include "Request.hpp"
+#include "../inc/Route.hpp"
+#include "../inc/Request.hpp"
 
 class Server
 {
@@ -21,7 +21,7 @@ public:
 
 	void add_route(const Route & route);
 	Route choose_route(const Request & req);
-	void what() const;
-
-	// setter/getter
+	void what();
 };
+
+std::vector<std::string> split(const std::string & tosplit, char delim);
