@@ -28,9 +28,6 @@ Worker & Worker::operator=(const Worker & right)
 {
 	_socket_clients = right._socket_clients;
 	_socket_servers = right._socket_servers;
-#ifdef DEBUG
-	std::cout << "[Worker] - operator=" << std::endl;
-#endif
 	return *this;
 }
 
@@ -48,7 +45,7 @@ void Worker::new_client(int kq, struct kevent & event)
 	 * cette erreure pour continer l'éxecution
 	 */
 #ifdef DEBUG
-	std::cout << "[Worker] - Nouvelle connexion client" << std::endl;
+	std::cout << "[Worker] - new client" << std::endl;
 #endif 
 	if (event.flags & EV_EOF)
 		/* returns the socket error (if any) in fflags */
@@ -80,19 +77,41 @@ void Worker::new_client(int kq, struct kevent & event)
 
 void Worker::recv_client(int kq, struct kevent & event)
 {
-	char buffer[event.data+1];
-	bzero(buffer, event.data+1);
+	char			buffer[event.data];
+	struct kevent	send_event;
+
 #ifdef DEBUG
-	std::cout << "[Worker] - réception client" << std::endl;
-#endif 
+	std::cout << "[Worker] - in client" << std::endl;
 	std::cout << event.data << " bytes to read" << std::endl;
-	read(event.ident, buffer, event.data);
-	_socket_clients[event.ident].buff += buffer;
-	std::cerr << buffer;
+#endif 
+	if (read(event.ident, buffer, event.data) == -1)
+		throw std::runtime_error(std::string(strerror(errno)));
+	_socket_clients[event.ident].buff.append(buffer, event.data);
+	EV_SET(&send_event, event.ident,
+			EVFILT_WRITE, EV_ADD, 0, 0, NULL);
+	if (kevent(kq, &send_event, 1, NULL, 0, NULL) == -1)
+		throw std::runtime_error(std::string(strerror(errno)));
 }
 
 void Worker::send_client(int kq, struct kevent & event)
 {
+	struct kevent	del_event;
+	Socket_client & client = _socket_clients[event.ident];
+
+#ifdef DEBUG
+	std::cout << "[Worker] - out client" << std::endl;
+	std::cout << client.buff.size() <<
+			" bytes to send" << std::endl;
+	std::cout << event.data << " bytes in pipe" << std::endl;
+#endif 
+	if (write(event.ident, client.buff.c_str(),
+				client.buff.size()) == -1)
+		throw std::runtime_error(std::string(strerror(errno)));
+	client.buff.clear();
+	EV_SET(&del_event, event.ident,
+			EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+	if (kevent(kq, &del_event, 1, NULL, 0, NULL) == -1)
+		throw std::runtime_error(std::string(strerror(errno)));
 }
 
 void Worker::del_client(int kq, struct kevent & event)
@@ -100,17 +119,21 @@ void Worker::del_client(int kq, struct kevent & event)
 	struct kevent		del_event;
 
 #ifdef DEBUG
-	std::cout << "[Worker] - Fin connexion client" << std::endl;
+	std::cout << "[Worker] - fin client" << std::endl;
 #endif 
+	/* Nous ne supprimons que le filtre READ, cependant, il 
+	 * est possible qu'un send soit en attente pour ce meme
+	 * client. Il serait judicieux d'intégrer l'etat de la
+	 * connexion dans la classe Socket_client pour pouvoir
+	 * supprimer le filtre WRITE quand cela est nécessaire
+	 */
 	EV_SET(&del_event, event.ident, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 	if (kevent(kq, &del_event, 1, NULL, 0, NULL) == -1)
 	{
-		/* est-il vraiment utile de le supprimmer de la map ? */
 		_socket_clients.erase(event.ident);
 		close(event.ident);
 		throw std::runtime_error(std::string(strerror(errno)));
 	}
-	/* est-il vraiment utile de le supprimmer de la map ? */
 	_socket_clients.erase(event.ident);
 	close(event.ident);
 }
@@ -142,6 +165,11 @@ void Worker::event_loop(void)
 		/* 
 		 * Boucle principale d'écoute, on récupére les événements
 		 * et on effectue le traitement en fonction du filtre levé
+		 * OPTIMISATION : Pour chaque événement, un appel a kevent
+		 * est déclenché, pour éviter les changements de contexte 
+		 * intempestif, il serait préférable d'accumuler les chan-
+		 * gements dans une eventlist et de ne faire qu'un seul 
+		 * appel a kevent pour un "TIC" d'horloge 
 		 */
 		if ((number_of_events = kevent(kq, NULL, 0,
 				eventlist, MAX_EVENTS, NULL)) == -1)

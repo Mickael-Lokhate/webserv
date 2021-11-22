@@ -57,10 +57,6 @@
 		+---------------------------------------------------------------------++
 */
 
-#include "Socket_client.hpp"
-#include "Socket_server.hpp"
-#include "Server.hpp"
-
 class Worker {
 
 	public:
@@ -76,10 +72,10 @@ class Worker {
 
 	private:
 
-	void new_client(int socket);
-	void recv_client(const Socket_client & c);
-	void send_client(const Socket_client & c);
-	void del_client(const Socket_client & c);
+	void new_client(int kq, struct kevent & event);
+	void recv_client(int kq, struct kevent & event);
+	void send_client(int kq, struct kevent & event);
+	void del_client(int kq, struct kevent & event);
 	
 	std::map<int, Socket_client>	_socket_clients;
 	std::map<int, Socket_server>	_socket_servers;
