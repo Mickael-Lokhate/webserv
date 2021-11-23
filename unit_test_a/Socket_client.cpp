@@ -42,5 +42,5 @@ void Socket_client::build_response(void)
 
 void Socket_client::what(void) const
 {
-	std::cout << "[" << fd << "] - " << addr << ":" << port << std::endl;
+	std::cout << "[" << fd << "] - " << addr << ":" << port;
 }
