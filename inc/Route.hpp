@@ -24,4 +24,7 @@ public:
 	Route();
 	~Route();
 	void what();
+
+private:
+	void init_error_page(void);
 };

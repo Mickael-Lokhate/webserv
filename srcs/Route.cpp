@@ -3,19 +3,17 @@
 Route::Route()
 {
 	root.first = "/www";
-	root.second = "false";
+	root.second = false;
 	autoindex = "off";
-	max_body_size = "100 000 000";
-	location = "/";
+	max_body_size = "1 000 000";
+	location = "www";
 	limit_except = "";
-	error_page; // a definir
+	init_error_page();
 	return_ = "";
 	ext = "";
 	index.push_back("index.html");
-	index.push_back("index.php");
-	index.push_back("index.py");
 	cgi = "";
-	upload = "/uploads";
+	upload = "uploads";
 }
 
 Route::~Route()
@@ -23,13 +21,26 @@ Route::~Route()
 	;
 }
 
+void Route::init_error_page(void)
+{
+	error_page.insert(std::pair<std::string, std::string>("403", "error/403.html"));
+	error_page.insert(std::pair<std::string, std::string>("404", "error/404.html"));
+	error_page.insert(std::pair<std::string, std::string>("500", "error/50x.html"));
+	error_page.insert(std::pair<std::string, std::string>("501", "error/501.html"));
+	error_page.insert(std::pair<std::string, std::string>("502", "error/50x.html"));
+	error_page.insert(std::pair<std::string, std::string>("503", "error/50x.html"));
+	error_page.insert(std::pair<std::string, std::string>("504", "error/50x.html"));
+}
+
 void Route::what()
 {
-	std::cout << "------ Route ------" << std::endl;
-	std::cout << "root : " << root.first << " " << root.second << std::endl;
+	std::cout << "------ Route : " << location << " ------" << std::endl;
+	if (!root.second)
+		std::cout << "root : " << root.first << std::endl;
+	else
+		std::cout << "alias : " << root.first << std::endl;
 	std::cout << "autoindex : " << autoindex << std::endl;
 	std::cout << "max_body_size : " << max_body_size << std::endl;
-	std::cout << "location : " << location << std::endl;
 	std::cout << "limit_except : " << limit_except << std::endl;
 
 	std::map<std::string, std::string>::iterator iterr = error_page.begin();
@@ -37,7 +48,7 @@ void Route::what()
 	std::cout << "error_page : " << std::endl;
 	while (iterr != iterre)
 	{
-		std::cout << (*iterr).first << " " << (*iterr).second << std::endl;
+		std::cout << "	" << (*iterr).first << " " << (*iterr).second << std::endl;
 		iterr++;
 	}
 	
@@ -49,7 +60,7 @@ void Route::what()
 	std::cout << "index :" << std::endl;
 	while (it != ite)
 	{
-		std::cout << *it << std::endl;
+		std::cout << "	" << *it << std::endl;
 		it++;
 	}
 	std::cout << "cgi : " << cgi << std::endl;
