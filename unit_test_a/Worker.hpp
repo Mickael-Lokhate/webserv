@@ -6,12 +6,13 @@
 /*   By: aclerac <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/11/22 15:45:49 by aclerac           #+#    #+#             */
-/*   Updated: 2021/11/23 08:45:58 by aclerac          ###   ########.fr       */
+/*   Updated: 2021/11/24 08:37:46 by aclerac          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 #include <string>
+#include <set>
 #include <map>
 #include <vector>
 #include <sys/types.h>
@@ -35,17 +36,18 @@ class Worker {
 
 	private:
 
-	void register_socket_servers(void);
-	void update_modif_list(int fd, int16_t filter, uint16_t flags);
-	void new_client(int i);
-	void recv_client(int i);
-	void send_client(int i);
-	void del_client(int i);
+	void	register_socket_servers(void);
+	void	update_modif_list(int fd, int16_t filter, uint16_t flags);
+	void	new_client(int i);
+	void	recv_client(int i);
+	void	send_client(int i);
+	void	del_client(int i);
 	
-	std::vector<struct kevent>		event_list;
-	std::vector<struct kevent>		modif_list;
+	std::vector<struct kevent>		_event_list;
+	std::vector<struct kevent>		_modif_list;
 	std::map<int, Socket_client>	_socket_clients;
 	std::map<int, Socket_server>	_socket_servers;
+	std::set<int>					_closed_clients;
 
 };
 

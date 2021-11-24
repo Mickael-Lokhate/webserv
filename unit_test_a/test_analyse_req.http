@@ -1,4 +1,4 @@
-Test STATUS_LINE
+# Test STATUS_LINE
 
 GET / HTTT/1.1
 HTTP/1.1 400 Bad Request
@@ -20,6 +20,8 @@ HTTP/1.1 400 Bad Request
 
 echo -n "GET /index.html HTTP/0" | nc 127.0.0.1 8000
 HTTP/1.1 400 Bad Request
+
+# Test HEADERS
 
 GET / HTTP/1.1
 dfsdfdsf
@@ -66,10 +68,8 @@ AAAAAAAAAA
 
 HTTP/1.1 200 OK
 
-HTTP/1.1 400 Bad RequestAAAAAAAAAA
-0
-
 HTTP/1.1 400 Bad Request
+
 
 POST /post_body HTTP/1.1
 Host: localhost
@@ -81,4 +81,92 @@ fff
 ee
 000000000000000000
 
+# test DOUBLONS
+
 HTTP/1.1 200 OK
+
+GET / HTTP/1.1
+Host: localhost
+Host: localhost
+
+HTTP/1.1 400 Bad Request
+
+GET / HTTP/1.1
+dsfsdf
+dsfsf
+dsfsdf
+sdfsdf
+Host: localhost kkkk
+Host: localhost
+HTTP/1.1 400 Bad Request
+
+POST /post_body HTTP/1.1
+Host: localhost
+Content-length: 3
+Content-length
+
+23
+HTTP/1.1 400 Bad Request
+
+GET / HTTP/1.1
+Content-length: 3
+Host: localhost
+Content-length: 3
+HTTP/1.1 400 Bad Reques
+
+GET / HTTP/1.1
+Host:
+HTTP/1.1 400 Bad Request
+
+GET / HTTP/1.1
+Host: localhost
+Transfer-encoding: chunked
+Transfer-encoding: chunked
+HTTP/1.1 400 Bad Request
+
+GET / HTTP/1.1
+Host: localhost
+Connection: close
+Connection: close
+HTTP/1.1 200 OK
+
+# test ESPACE
+=> ne pas prendre en compte le header si espace avant ":"
+
+POST /post_body HTTP/1.1
+Host: localhost
+Transfer-encoding: chunked
+
+HTTP/1.1 200 OK
+
+POST /post_body HTTP/1.1
+Host: localhost
+Content-length : 2
+
+HTTP/1.1 200 OK
+
+GET / HTTP/1.1
+Host : localhost
+
+HTTP/1.1 400 Bad Request
+
+# test CGI user var
+
+POST /post_body HTTP/1.1
+HOST: localhost
+X-Secret-Header-For-Test: 1
+
+HTTP/1.1 200 OK
+
+
+# test CGI user var
+=> X- ... X_
+POST /post_body HTTP/1.1
+HOST: localhost
+X-Secret-Header-For-Test: 1
+
+HTTP/1.1 200 OK
+...
+HTTP_X_SECRET_HEADER_FOR_TEST=1
+
+
