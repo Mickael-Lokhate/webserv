@@ -1,4 +1,4 @@
-#include "../inc/Route.hpp"
+#include "Route.hpp"
 
 Route::Route()
 {
@@ -58,14 +58,8 @@ void Route::what()
 		iterr++;
 	}
 
-	std::map<std::string, std::string>::iterator itret = return_.begin();
-	std::map<std::string, std::string>::iterator itrete = return_.end();
 	std::cout << "return : " << std::endl;
-	while (itret != itrete)
-	{
-		std::cout << "	" << (*itret).first << " " << (*itret).second << std::endl;
-		itret++;
-	}
+	std::cout << "	" << return_.first << " " << return_.second << std::endl;
 
 	std::cout << "ext : " << ext << std::endl;
 
@@ -79,5 +73,4 @@ void Route::what()
 	}
 	std::cout << "cgi : " << cgi << std::endl;
 	std::cout << "upload : " << upload << std::endl;
-	;
 }

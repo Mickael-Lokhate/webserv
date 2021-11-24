@@ -4,8 +4,8 @@
 #include <iostream>
 #include <map>
 #include <vector>
-#include "../inc/Route.hpp"
-#include "../inc/Request.hpp"
+#include "Route.hpp"
+#include "Request.hpp"
 
 class Server
 {

@@ -14,7 +14,7 @@ public:
 	std::string location;
 	std::vector<std::string> limit_except;
 	std::map<std::string, std::string> error_page;
-	std::map<std::string, std::string> return_;
+	std::pair<std::string, std::string> return_;
 	std::string ext;
 	std::vector<std::string> index;
 	std::string cgi;

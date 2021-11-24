@@ -12,6 +12,6 @@ int main(int ac, char **av)
 
 	Loader load(file);
 	load.add_servers(servers);
-	load.what();
+//	load.what();
 	return (0);
 }
