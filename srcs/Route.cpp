@@ -6,10 +6,8 @@ Route::Route()
 	root.second = false;
 	autoindex = "off";
 	max_body_size = "1 000 000";
-	location = "www";
-	limit_except = "";
+	location = "";
 	init_error_page();
-	return_ = "";
 	ext = "";
 	index.push_back("index.html");
 	cgi = "";
@@ -41,7 +39,15 @@ void Route::what()
 		std::cout << "alias : " << root.first << std::endl;
 	std::cout << "autoindex : " << autoindex << std::endl;
 	std::cout << "max_body_size : " << max_body_size << std::endl;
-	std::cout << "limit_except : " << limit_except << std::endl;
+
+	std::vector<std::string>::iterator itexc = limit_except.begin();
+	std::vector<std::string>::iterator itexce = limit_except.end();
+	std::cout << "limit_except : " << std::endl;
+	while (itexc != itexce)
+	{
+		std::cout << "	" << *itexc << std::endl;
+		itexc++;
+	}
 
 	std::map<std::string, std::string>::iterator iterr = error_page.begin();
 	std::map<std::string, std::string>::iterator iterre = error_page.end();
@@ -51,8 +57,16 @@ void Route::what()
 		std::cout << "	" << (*iterr).first << " " << (*iterr).second << std::endl;
 		iterr++;
 	}
-	
-	std::cout << "return : " << return_ << std::endl;
+
+	std::map<std::string, std::string>::iterator itret = return_.begin();
+	std::map<std::string, std::string>::iterator itrete = return_.end();
+	std::cout << "return : " << std::endl;
+	while (itret != itrete)
+	{
+		std::cout << "	" << (*itret).first << " " << (*itret).second << std::endl;
+		itret++;
+	}
+
 	std::cout << "ext : " << ext << std::endl;
 
 	std::vector<std::string>::iterator it = index.begin();

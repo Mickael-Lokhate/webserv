@@ -12,9 +12,9 @@ public:
 	std::string autoindex;
 	std::string max_body_size;
 	std::string location;
-	std::string limit_except;
+	std::vector<std::string> limit_except;
 	std::map<std::string, std::string> error_page;
-	std::string return_;
+	std::map<std::string, std::string> return_;
 	std::string ext;
 	std::vector<std::string> index;
 	std::string cgi;
