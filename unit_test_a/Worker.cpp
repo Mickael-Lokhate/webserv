@@ -39,10 +39,12 @@ Worker & Worker::operator=(const Worker & right)
 	return *this;
 }
 
-void Worker::update_modif_list(int fd, int16_t filter, uint16_t flags)
+void Worker::update_modif_list(int fd, int16_t filter,
+		uint16_t flags, uint32_t fflags, intptr_t data)
 {
 	_modif_list.resize(_modif_list.size() + 1);
-	EV_SET(&(*(_modif_list.end() - 1)), fd, filter, flags, 0, 0, NULL);
+	EV_SET(_modif_list.end().base() - 1, fd, filter, flags,
+			fflags, data, NULL);
 }
 
 void Worker::new_client(int i)
@@ -61,6 +63,8 @@ void Worker::new_client(int i)
 		if ((new_client = accept(_event_list[i].ident,
 						(struct sockaddr *)&from, &slen)) == -1)
 			throw std::runtime_error(std::string(strerror(errno)));
+		update_modif_list(new_client, EVFILT_TIMER,
+			EV_ADD | EV_ONESHOT, NOTE_SECONDS, 5);
 		update_modif_list(new_client, EVFILT_READ, EV_ADD);
 		char buffer[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &(from.sin_addr), buffer, INET_ADDRSTRLEN);
@@ -132,8 +136,8 @@ void Worker::event_loop(void)
 		throw std::runtime_error(std::string(strerror(errno)));
 	while (1)
 	{
-		if ((number_of_events = kevent(kq, &(*(_modif_list.begin())),
-			_modif_list.size(), &(*(_event_list.begin())),
+		if ((number_of_events = kevent(kq, _modif_list.begin().base(),
+			_modif_list.size(), _event_list.begin().base(),
 			_event_list.size(), NULL)) == -1)
 			throw std::runtime_error(std::string(strerror(errno)));
 		_modif_list.resize(0);
@@ -152,7 +156,8 @@ void Worker::event_loop(void)
 						_closed_clients.end())
 						continue ;
 					/* fin de connexion client */
-					else if  (_event_list[i].flags & EV_EOF)
+					else if  (_event_list[i].flags & EV_EOF || 
+							_event_list[i].filter == EVFILT_TIMER)
 						del_client(i);
 					else
 					{

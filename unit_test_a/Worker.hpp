@@ -6,7 +6,7 @@
 /*   By: aclerac <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/11/22 15:45:49 by aclerac           #+#    #+#             */
-/*   Updated: 2021/11/24 08:37:46 by aclerac          ###   ########.fr       */
+/*   Updated: 2021/11/24 19:39:50 by aclerac          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,9 @@ class Worker {
 	private:
 
 	void	register_socket_servers(void);
-	void	update_modif_list(int fd, int16_t filter, uint16_t flags);
+	void	update_modif_list(int fd, int16_t filter,
+				uint16_t flags = 0, uint32_t fflags = 0,
+				intptr_t data = 0);
 	void	new_client(int i);
 	void	recv_client(int i);
 	void	send_client(int i);
