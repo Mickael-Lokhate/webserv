@@ -112,12 +112,21 @@ void	Loader::_parse_config(std::vector<Server> & servers)
 				{
 					loc_it.push_back(beg);
 					while (beg != _config_tab.end() && (*beg).compare("}") != 0)
+					{
 						++beg;
+						if ((*beg).find("location") != std::string::npos)
+						{
+							while (beg != _config_tab.end() && (*beg).compare("}") != 0)
+								++beg;
+							++beg;
+						}
+					}
 				}
 				else
 					throw std::string("Syntax error");
 				++beg;
 			}
+			new_server.routes.clear();
 			new_server.add_route(default_route);
 			_create_route(new_server, default_route, loc_it);
 			new_server.what();
@@ -125,13 +134,6 @@ void	Loader::_parse_config(std::vector<Server> & servers)
 		else
 			throw std::string("Syntax error");
 	}
-}
-
-void	Loader::_parse_server(Server & new_server)
-{
-	std::cout << "Parse  of a server start" << std::endl;
-	// Setup tous les attributs du server rencontre
-	// Setup les attributs de new_route_conf avec les valeurs du fichier de conf ou NULL 
 }
 
 void	Loader::_print_config(std::string curr_line) const {
@@ -151,6 +153,8 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 	for (std::vector<std::vector<std::string>::iterator>::iterator beg = loc_it.begin(); beg != loc_it.end(); ++beg)
 	{
 		Route new_route;
+		new_route.location = default_route.location;
+		std::cout << "DEBUG : " << new_route.location;
 		new_route.root.first = default_route.root.first;
 		new_route.root.second = default_route.root.second;
 		new_route.autoindex = default_route.autoindex;
@@ -160,6 +164,7 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 		new_route.index = default_route.index;
 		std::vector<std::string> tmp_split = split(*(*beg), ' ');
 		std::vector<std::string>::iterator	line = ++(*beg);
+		std::vector<std::vector<std::string>::iterator> new_loc_vec;
 		if (tmp_split.size() < 2)
 			throw std::string("Syntax error");
 		if (tmp_split.at(1).find(".") != std::string::npos)
@@ -167,7 +172,8 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 			tmp_split = split(tmp_split.at(1), '.');
 			if (tmp_split.size() != 2)
 				throw std::string("Syntax error");
-			new_route.location = tmp_split.at(0);
+			if (!(tmp_split.at(0).empty()))
+				new_route.location = tmp_split.at(0);
 			new_route.ext = tmp_split.at(1);
 		}
 		else
@@ -197,7 +203,6 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 			}
 			else if ((*line).find("client_max_body_size") != std::string::npos)
 			{
-				//TODO: Error management
 				tmp_split = split((*line), ' ');
 				if (tmp_split.size() != 2)
 					throw std::string("Syntax error");
@@ -225,14 +230,16 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 				tmp_split = split((*line), ' ');
 				if (tmp_split.size() < 2)
 					throw std::string("Syntax error");
-				//TODO: modify Route, not only 1 method
-				//if (tmp_split.at(1) != "GET" || tmp_split.at(1) != "POST"
-				//		|| tmp_split.at(1) != "PUT" || tmp_split.at(1) != "HEAD"
-				//		|| tmp_split.at(1) != "DELETE")
-				//	throw std::string("Syntax error");
+				
 				new_route.limit_except.clear();
-				for (int i = 1; i < tmp_split.size(); i++)
+				for (size_t i = 1; i < tmp_split.size(); i++)
+				{
+					if (tmp_split.at(i) != "GET" && tmp_split.at(i) != "POST"
+						&& tmp_split.at(i) != "PUT" && tmp_split.at(i) != "HEAD"
+						&& tmp_split.at(i) != "DELETE")	
+						throw std::string("Syntax error");
 					new_route.limit_except.push_back(tmp_split.at(i));
+				}
 			}
 			else if ((*line).find("cgi") != std::string::npos)
 			{
@@ -250,12 +257,14 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 			}
 			else if ((*line).find("location") != std::string::npos)
 			{
+				new_loc_vec.push_back(line);
 				while ((*line).compare("}") != 0)
 					++(line);
 			}
 			++(line);
 		}
 		server.add_route(new_route);
+		_create_route(server, new_route, new_loc_vec);
 	}
 }
 
