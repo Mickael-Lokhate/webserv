@@ -6,6 +6,8 @@
 #include "Server.hpp"
 #include "Route.hpp"
 
+#define SYNTAX_ERROR std::runtime_error("Syntax error in configuration file")
+
 class Loader {
 
 public:

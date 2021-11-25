@@ -49,7 +49,7 @@ void	Loader::_parse_config(std::vector<Server> & servers)
 				if (beg + 1 != _config_tab.end())
 					++beg;
 				else
-					throw std::runtime_error("Syntax error");
+					throw SYNTAX_ERROR;
 			}
 			new_server.routes.clear();
 			new_server.add_route(default_route);
@@ -58,7 +58,7 @@ void	Loader::_parse_config(std::vector<Server> & servers)
 			servers.push_back(new_server);
 		}
 		else
-			throw std::runtime_error("Syntax error");
+			throw SYNTAX_ERROR;
 	}
 }
 
@@ -66,15 +66,7 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 {
 	for (std::vector<std::vector<std::string>::iterator>::iterator beg = loc_it.begin(); beg != loc_it.end(); ++beg)
 	{
-		Route new_route;
-		new_route.location = default_route.location;
-		new_route.root.first = default_route.root.first;
-		new_route.root.second = default_route.root.second;
-		new_route.autoindex = default_route.autoindex;
-		new_route.max_body_size = default_route.max_body_size;
-		new_route.return_.first = default_route.return_.first;
-		new_route.return_.second = default_route.return_.second;
-		new_route.index = default_route.index;
+		Route new_route(default_route);
 		std::vector<std::string> tmp_split = split(*(*beg), ' ');
 		std::vector<std::string>::iterator	line = ++(*beg);
 		std::vector<std::vector<std::string>::iterator> new_loc_vec;
@@ -86,7 +78,7 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 			if ((line + 1) != _config_tab.end())
 				++(line);
 			else
-				throw std::runtime_error("Syntax error");
+				throw SYNTAX_ERROR;
 		}
 		server.add_route(new_route);
 		_create_route(server, new_route, new_loc_vec);

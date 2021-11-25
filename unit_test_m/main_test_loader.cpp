@@ -11,7 +11,11 @@ int main(int ac, char **av)
 		return (1);
 
 	Loader load(file);
+	try {
 	load.add_servers(servers);
+	} catch (std::exception &e) {
+		std::cout << e.what() << std::endl;
+	}
 //	load.what();
 	return (0);
 }
