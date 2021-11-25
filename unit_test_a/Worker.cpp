@@ -93,7 +93,16 @@ void Worker::recv_client(int i)
 #endif 
 	_socket_clients[_event_list[i].ident].buff.append(buffer,
 			_event_list[i].data);
-	update_modif_list(_event_list[i].ident, EVFILT_WRITE, EV_ADD);
+	// state : build_headers, build_body, build_response, response_ready, send
+	// 			TO_header     TO_body               TO_reponse            TO_send
+	// _socket_clients[i].build_request();
+
+	// if (_socket_clients[i].state == build_response)
+	// 		_socket_clients[i].build_response();
+	// if (_socket_clients[i].state == build_response)
+	// 		update_modif_list(fd, EVFILT_READ, EV_ADD);
+	// if (_socket_clients[i].state == response_ready)
+	// 		update_modif_list(_event_list[i].ident, EVFILT_WRITE, EV_ADD);
 }
 
 void Worker::send_client(int i)
