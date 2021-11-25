@@ -41,8 +41,12 @@ private:
 	void	_treat_limit_except(t_vector_string split_line, Route &default_route);
 	void	_treat_cgi(t_vector_string split_line, Route &default_route);
 	void	_treat_upload(t_vector_string split_line, Route &default_route);
+	void	_get_location_name(t_vector_string &split_line, Route &default_route);
 
 	void	_treat_location(t_vector_iterator &location_iterator, t_vector_string_iterator &it);
+
+	void	_treatment_server(t_vector_string_iterator &begin, Server &new_server, Route &default_route, t_vector_iterator &location_iterator);
+	void	_treatment_location(t_vector_string_iterator &begin, Route &default_route, t_vector_iterator &location_iterator);
 	
 	std::string	_trim(const std::string &s);
 	std::string	_ltrim(const std::string &s);
