@@ -118,13 +118,18 @@ void	Loader::_treat_location(t_vector_iterator &location_iterator, t_vector_stri
 	location_iterator.push_back(it);
 	while (it != _config_tab.end() && (*it).compare("}") != 0)
 	{
-		++it;
+		if ((it + 1) != _config_tab.end())
+			++it;
+		else
+			throw std::runtime_error("Syntax error");
 		if ((*it).find("location") != std::string::npos)
 		{
 			while (it != _config_tab.end() && (*it).compare("}") != 0)
 				++it;
-			if (it != _config_tab.end())
+			if ((it) != _config_tab.end())
 				++it;
+			else
+				throw std::runtime_error("Syntax error");
 		}
 	}
 }

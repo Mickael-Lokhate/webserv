@@ -55,6 +55,7 @@ void	Loader::_parse_config(std::vector<Server> & servers)
 			new_server.add_route(default_route);
 			_create_route(new_server, default_route, loc_it);
 			new_server.what();
+			servers.push_back(new_server);
 		}
 		else
 			throw std::runtime_error("Syntax error");
@@ -82,7 +83,10 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 		while ((*line).compare("}") != 0)
 		{
 			_treatment_location(line, new_route, new_loc_vec);
-			++(line);
+			if ((line + 1) != _config_tab.end())
+				++(line);
+			else
+				throw std::runtime_error("Syntax error");
 		}
 		server.add_route(new_route);
 		_create_route(server, new_route, new_loc_vec);
