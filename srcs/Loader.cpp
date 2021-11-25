@@ -15,9 +15,8 @@ void	Loader::add_servers(std::vector<Server> & servers)
 	_parse_config(servers);
 }
 
-void	Loader::_parse_config(std::vector<Server> & servers)
+void	Loader::_fill_config_tab(void)
 {
-	std::cout << "Configuration parsing start" << std::endl;
 	std::string	line;
 	while (getline(_config_file, line))
 	{
@@ -26,104 +25,47 @@ void	Loader::_parse_config(std::vector<Server> & servers)
 			continue ;
 		_config_tab.push_back(line);
 	}
-	std::vector<std::string>::iterator	beg = _config_tab.begin();
+}
+
+void	Loader::_parse_config(std::vector<Server> & servers)
+{
+	std::vector<std::string>::iterator	beg;
 	std::vector<std::string> tmp_split;
-	for (; beg != _config_tab.end(); beg++)
+	
+	_fill_config_tab();	
+	for (beg = _config_tab.begin(); beg != _config_tab.end(); beg++)
 	{
-		if ((*beg).find("server") != std::string::npos &&
-				((*beg)[(*beg).size() - 1] == '{' || (*(beg + 1)).compare("{") == 0 ))
+		if ((*beg).find("server") != std::string::npos
+				&& ((*beg)[(*beg).size() - 1] == '{'
+				|| (*(++beg)).compare("{") == 0 ))
 		{
 			++beg;
-			if ((*beg).compare("{") == 0)
-				++beg;
-			Server	new_server;
-			Route	default_route;
-			std::vector<std::vector<std::string>::iterator> loc_it;
+
+			Server				new_server;
+			Route				default_route;
+			t_vector_iterator	loc_it;
 			while (beg != _config_tab.end() && ((*beg).compare("}")) != 0)
 			{
-				if ((*beg).find("listen") != std::string::npos)
-				{
-					tmp_split = split(*beg, ' ');
-					if (tmp_split.size() <= 1 || tmp_split.size() > 3)
-						throw std::runtime_error("Syntax error");
-					if (tmp_split.size() == 2)
-						new_server.port = tmp_split.at(1);
-					else
-					{
-						new_server.address = tmp_split.at(1);
-						new_server.port = tmp_split.at(2);
-					}
-					tmp_split.clear();
-				}
-				else if ((*beg).find("server_name") != std::string::npos)
-				{
-					tmp_split = split(*beg, ' ');
-					if (tmp_split.size() <= 1)
-						throw std::runtime_error("Syntax error");
-					new_server.server_name = tmp_split.at(1);
-				}
-				else if ((*beg).find("root") != std::string::npos)
-				{
-					tmp_split = split(*beg, ' ');
-					if (tmp_split.size() <= 1)
-						throw std::runtime_error("Syntax error");
-					default_route.root.first = tmp_split.at(1);
-					if (tmp_split.size() == 3)
-					{
-						if (tmp_split.at(2).compare("alias") == 0)
-							default_route.root.second = true;
-						else
-							throw std::runtime_error("Syntax error");
-					}
-				}
-				else if ((*beg).find("autoindex") != std::string::npos)
-				{
-					tmp_split = split(*beg, ' ');
-					if (tmp_split.size() != 2)
-						throw std::runtime_error("Syntax error");
-					default_route.autoindex = tmp_split.at(1);
-				}
-				else if ((*beg).find("client_max_body_size") != std::string::npos)
-				{
-					tmp_split = split(*beg, ' ');
-					if (tmp_split.size() != 2)
-						throw std::runtime_error("Syntax error");
-					default_route.max_body_size = tmp_split.at(1);
-				}
-				else if ((*beg).find("return") != std::string::npos)
-				{
-					tmp_split = split(*beg, ' ');
-					if (tmp_split.size() != 3)
-						throw std::runtime_error("Syntax error");
-					default_route.return_.first = tmp_split.at(1);
-					default_route.return_.second = tmp_split.at(2);
-				}
-				else if ((*beg).find("index") != std::string::npos)
-				{
-					tmp_split = split(*beg, ' ');
-					if (tmp_split.size() < 2)
-						throw std::runtime_error("Syntax error");
-					default_route.index.clear();
-					for (std::vector<std::string>::iterator tmp_it = tmp_split.begin() + 1; tmp_it != tmp_split.end(); ++tmp_it)
-						default_route.index.push_back(*tmp_it);
-				}
-				else if ((*beg).find("location") != std::string::npos)
-				{
-					loc_it.push_back(beg);
-					while (beg != _config_tab.end() && (*beg).compare("}") != 0)
-					{
-						++beg;
-						if ((*beg).find("location") != std::string::npos)
-						{
-							while (beg != _config_tab.end() && (*beg).compare("}") != 0)
-								++beg;
-							if (beg != _config_tab.end())
-								++beg;
-						}
-					}
-				}
+				tmp_split = split(*beg, ' ');
+				if (tmp_split.at(0).compare("listen") == 0)
+					_treat_listen(tmp_split, new_server);
+				else if (tmp_split.at(0).compare("server_name") == 0)
+					_treat_server_name(tmp_split, new_server);	
+				else if (tmp_split.at(0).compare("root") == 0)
+					_treat_root(tmp_split, default_route);
+				else if (tmp_split.at(0).compare("autoindex") == 0)
+					_treat_autoindex(tmp_split, default_route);	
+				else if (tmp_split.at(0).compare("client_max_body_size") == 0)
+					_treat_max_body_size(tmp_split, default_route); 	
+				else if (tmp_split.at(0).compare("return") == 0)
+					_treat_return(tmp_split, default_route);	
+				else if (tmp_split.at(0).compare("index") == 0)
+					_treat_index(tmp_split, default_route);	
+				else if (tmp_split.at(0).compare("location") == 0)
+					_treat_location(loc_it, beg);	
 				else
 					throw std::runtime_error("Syntax error");
+				tmp_split.clear();
 				if (beg + 1 != _config_tab.end())
 					++beg;
 				else
@@ -136,6 +78,86 @@ void	Loader::_parse_config(std::vector<Server> & servers)
 		}
 		else
 			throw std::runtime_error("Syntax error");
+	}
+}
+
+void	Loader::_treat_listen(t_vector_string split_line, Server &new_server)
+{
+	if (split_line.size() <= 1 || split_line.size() > 3)
+		throw std::runtime_error("Syntax error");
+	if (split_line.size() == 2)
+		new_server.port = split_line.at(1);
+	else
+	{
+		new_server.address = split_line.at(1);
+		new_server.port = split_line.at(2);
+	}
+}
+
+void	Loader::_treat_server_name(t_vector_string split_line, Server &new_server)
+{
+	if (split_line.size() <= 1)
+		throw std::runtime_error("Syntax error");
+	new_server.server_name = split_line.at(1);
+}
+
+void	Loader::_treat_root(t_vector_string split_line, Route &default_route)
+{
+	if (split_line.size() <= 1)
+		throw std::runtime_error("Syntax error");
+	default_route.root.first = split_line.at(1);
+	if (split_line.size() == 3)
+	{
+		if (split_line.at(2).compare("alias") == 0)
+			default_route.root.second = true;
+		else
+			throw std::runtime_error("Syntax error");
+	}
+}
+void	Loader::_treat_autoindex(t_vector_string split_line, Route &default_route)
+{
+	if (split_line.size() != 2)
+		throw std::runtime_error("Syntax error");
+	default_route.autoindex = split_line.at(1);
+}
+
+void	Loader::_treat_max_body_size(t_vector_string split_line, Route &default_route)
+{
+	if (split_line.size() != 2)
+		throw std::runtime_error("Syntax error");
+	default_route.max_body_size = split_line.at(1);
+}
+
+void	Loader::_treat_return(t_vector_string split_line, Route &default_route)
+{
+	if (split_line.size() != 3)
+		throw std::runtime_error("Syntax error");
+	default_route.return_.first = split_line.at(1);
+	default_route.return_.second = split_line.at(2);
+}
+
+void	Loader::_treat_index(t_vector_string split_line, Route &default_route)
+{
+	if (split_line.size() < 2)
+		throw std::runtime_error("Syntax error");
+	default_route.index.clear();
+	for (std::vector<std::string>::iterator tmp_it = split_line.begin() + 1; tmp_it != split_line.end(); ++tmp_it)
+		default_route.index.push_back(*tmp_it);
+}
+
+void	Loader::_treat_location(t_vector_iterator &location_iterator, t_vector_string_iterator &it)
+{
+	location_iterator.push_back(it);
+	while (it != _config_tab.end() && (*it).compare("}") != 0)
+	{
+		++it;
+		if ((*it).find("location") != std::string::npos)
+		{
+			while (it != _config_tab.end() && (*it).compare("}") != 0)
+				++it;
+			if (it != _config_tab.end())
+				++it;
+		}
 	}
 }
 
@@ -182,9 +204,9 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 			new_route.location = tmp_split.at(1);
 		while ((*line).compare("}") != 0)
 		{
-			if ((*line).find("root") != std::string::npos)
+			tmp_split = split(*line, ' ');
+			if (tmp_split.at(0).compare("root") == 0)
 			{
-				tmp_split = split(*line, ' ');
 				if (tmp_split.size() <= 1)
 					throw std::runtime_error("Syntax error");
 				new_route.root.first = tmp_split.at(1);
@@ -196,40 +218,35 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 						throw std::runtime_error("Syntax error");
 				}
 			}
-			else if ((*line).find("autoindex") != std::string::npos)
+			else if (tmp_split.at(0).compare("autoindex") == 0)
 			{
-				tmp_split = split((*line), ' ');
 				if (tmp_split.size() != 2)
 					throw std::runtime_error("Syntax error");
 				new_route.autoindex = tmp_split.at(1);
 			}
-			else if ((*line).find("client_max_body_size") != std::string::npos)
+			else if (tmp_split.at(0).compare("client_max_body_size") == 0)
 			{
-				tmp_split = split((*line), ' ');
 				if (tmp_split.size() != 2)
 					throw std::runtime_error("Syntax error");
 				new_route.max_body_size = tmp_split.at(1);
 			}
-			else if ((*line).find("return") != std::string::npos)
+			else if (tmp_split.at(0).compare("return") == 0)
 			{
-				tmp_split = split((*line), ' ');
 				if (tmp_split.size() != 3)
 					throw std::runtime_error("Syntax error");
 				new_route.return_.first = tmp_split.at(1);
 				new_route.return_.second = tmp_split.at(2);
 			}
-			else if ((*line).find("index") != std::string::npos)
+			else if (tmp_split.at(0).compare("index") == 0)
 			{
-				tmp_split = split((*line), ' ');
 				if (tmp_split.size() < 2)
 					throw std::runtime_error("Syntax error");
 				new_route.index.clear();
 				for (std::vector<std::string>::iterator tmp_it = tmp_split.begin() + 1; tmp_it != tmp_split.end(); ++tmp_it)
 					new_route.index.push_back(*tmp_it);
 			}
-			else if ((*line).find("limit_except") != std::string::npos)
+			else if (tmp_split.at(0).compare("limit_except") == 0)
 			{
-				tmp_split = split((*line), ' ');
 				if (tmp_split.size() < 2)
 					throw std::runtime_error("Syntax error");
 				
@@ -243,21 +260,19 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 					new_route.limit_except.push_back(tmp_split.at(i));
 				}
 			}
-			else if ((*line).find("cgi") != std::string::npos)
+			else if (tmp_split.at(0).compare("cgi") == 0)
 			{
-				tmp_split = split((*line), ' ');
 				if (tmp_split.size() != 2)
 					throw std::runtime_error("Syntax error");
 				new_route.cgi = tmp_split.at(1);
 			}
-			else if ((*line).find("upload") != std::string::npos)
+			else if (tmp_split.at(0).compare("upload") == 0)
 			{
-				tmp_split = split((*line), ' ');
 				if (tmp_split.size() != 2)
 					throw std::runtime_error("Syntax error");
 				new_route.upload = tmp_split.at(1);
 			}
-			else if ((*line).find("location") != std::string::npos)
+			else if (tmp_split.at(0).compare("location") == 0)
 			{
 				new_loc_vec.push_back(line);
 				while ((*line).compare("}") != 0)
@@ -266,6 +281,7 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 			else
 				throw std::runtime_error("Syntax error");
 			++(line);
+			tmp_split.clear();
 		}
 		server.add_route(new_route);
 		_create_route(server, new_route, new_loc_vec);
