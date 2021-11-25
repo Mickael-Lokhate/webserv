@@ -24,7 +24,7 @@ public:
 
 private:
 	std::ifstream & _config_file; 
-	std::vector<std::string> _config_tab;
+	t_vector_string _config_tab;
 
 	Loader(void);
 	void	_parse_config(std::vector<Server> & servers);
@@ -50,6 +50,7 @@ private:
 
 	void	_treatment_server(t_vector_string_iterator &begin, Server &new_server, Route &default_route, t_vector_iterator &location_iterator);
 	void	_treatment_location(t_vector_string_iterator &begin, Route &default_route, t_vector_iterator &location_iterator);
+	void	_treatment_common(t_vector_string split_line, t_vector_string_iterator &begin, Route &default_route, t_vector_iterator &location_iterator);
 	
 	std::string	_trim(const std::string &s);
 	std::string _trim_comments(const std::string &s);

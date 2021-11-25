@@ -1,30 +1,36 @@
 #include "Loader.hpp"
 
+void	Loader::_treatment_common(t_vector_string split_line, t_vector_string_iterator &begin, Route &default_route, t_vector_iterator &location_iterator)
+{
+	if (split_line.at(0).compare("root") == 0)
+		_treat_root(split_line, default_route);
+	else if (split_line.at(0).compare("autoindex") == 0)
+		_treat_autoindex(split_line, default_route);
+	else if (split_line.at(0).compare("client_max_body_size") == 0)
+		_treat_max_body_size(split_line, default_route);
+	else if (split_line.at(0).compare("return") == 0)
+		_treat_return(split_line, default_route);
+	else if (split_line.at(0).compare("index") == 0)
+		_treat_index(split_line, default_route);
+	else if (split_line.at(0).compare("error_page") == 0)
+		_treat_error_page(split_line, default_route);
+	else if (split_line.at(0).compare("location") == 0)
+		_treat_location(location_iterator, begin);
+	else
+		throw SYNTAX_ERROR;
+}
+
 void	Loader::_treatment_location(t_vector_string_iterator &begin, Route &default_route, t_vector_iterator &location_iterator)
 {
 	t_vector_string	tmp_split = split(*begin, ' ');
-	if (tmp_split.at(0).compare("root") == 0)
-		_treat_root(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("autoindex") == 0)
-		_treat_autoindex(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("client_max_body_size") == 0)
-		_treat_max_body_size(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("return") == 0)
-		_treat_return(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("index") == 0)
-		_treat_index(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("limit_except") == 0)
+	if (tmp_split.at(0).compare("limit_except") == 0)
 		_treat_limit_except(tmp_split, default_route);
 	else if (tmp_split.at(0).compare("cgi") == 0)
 		_treat_cgi(tmp_split, default_route);
 	else if (tmp_split.at(0).compare("upload") == 0)
 		_treat_upload(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("error_page") == 0)
-		_treat_error_page(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("location") == 0)
-		_treat_location(location_iterator, begin);
 	else
-		throw SYNTAX_ERROR;
+		_treatment_common(tmp_split, begin, default_route, location_iterator);
 }
 
 void	Loader::_treatment_server(t_vector_string_iterator &begin, Server &new_server, Route &default_route, t_vector_iterator &location_iterator)
@@ -35,22 +41,8 @@ void	Loader::_treatment_server(t_vector_string_iterator &begin, Server &new_serv
 		_treat_listen(tmp_split, new_server);
 	else if (tmp_split.at(0).compare("server_name") == 0)
 		_treat_server_name(tmp_split, new_server);
-	else if (tmp_split.at(0).compare("root") == 0)
-		_treat_root(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("autoindex") == 0)
-		_treat_autoindex(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("client_max_body_size") == 0)
-		_treat_max_body_size(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("return") == 0)
-		_treat_return(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("index") == 0)
-		_treat_index(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("error_page") == 0)
-		_treat_error_page(tmp_split, default_route);
-	else if (tmp_split.at(0).compare("location") == 0)
-		_treat_location(location_iterator, begin);
 	else
-		throw SYNTAX_ERROR;
+		_treatment_common(tmp_split, begin, default_route, location_iterator);
 }
 
 void	Loader::_treat_listen(t_vector_string split_line, Server &new_server)
