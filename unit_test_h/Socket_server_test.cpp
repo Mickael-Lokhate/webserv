@@ -8,7 +8,7 @@ int main(int ac, char ** av) {
 		ss.bind_();
 		ss.listen_();
 		read(0, (char []){0}, 1);
-	} catch(std::string const & str) {
-		std::cout << str << "\n";
+	} catch(std::exception const & e) {
+		std::cout << e.what() << "\n";
 	}
 }

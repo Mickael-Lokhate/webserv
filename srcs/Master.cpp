@@ -14,7 +14,7 @@ void Master::init() {
 		_file_conf = _DEFAULT_CONF;
 	std::ifstream ifs (_file_conf);
 	if(!ifs.good())
-		throw STRDEBUG0;
+		throw std::runtime_error(STRDEBUG0);
 	Loader loader(ifs);
 	try {
 		loader.add_servers(_servers);
