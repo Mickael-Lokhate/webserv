@@ -6,7 +6,7 @@ Socket_server::Socket_server(std::string const & port, std::string const & addre
 void Socket_server::listen_() {
 	int ret = listen(this->fd, this->BACKLOG);
 	if (ret == -1)
-		throw std::runtime_error(STRDEBUG0);
+		throw STRDEBUG0;
 }
 
 void Socket_server::bind_() {
@@ -15,7 +15,7 @@ void Socket_server::bind_() {
 	int ret = 0;
 	this->fd = socket(PF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
-		throw std::runtime_error(STRDEBUG0);
+		throw STRDEBUG0;
 
 	// socket options
     ret = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (int[]){1}, 4);
@@ -23,7 +23,7 @@ void Socket_server::bind_() {
 		throw std::string(STRDEBUG0);
 	ret = fcntl(this->fd, F_SETFL, O_NONBLOCK);
 	if (ret == -1)
-		throw std::runtime_error(STRDEBUG0);
+		throw STRDEBUG0;
 
 	// bind
 	struct sockaddr_in address;
@@ -33,8 +33,9 @@ void Socket_server::bind_() {
 	inet_pton(AF_INET, this->address.c_str(), &(address.sin_addr));
 
 	ret = bind(this->fd, (struct sockaddr *)&address, sizeof(address));
-	if (ret == -1) 
-		throw std::runtime_error(STRDEBUG0);
+	if (ret == -1) {
+		throw STRDEBUG0;
+	}
 }
 
 void Socket_server::what() {
