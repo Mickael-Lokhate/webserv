@@ -14,4 +14,8 @@ int	main(void)
 	std::cout << loc << std::endl;
 	server._format_double_dot(loc);
 	std::cout << loc << std::endl;
+
+	loc = "/%4F/%20/%42";
+	server._decode_uri(loc);
+	std::cout << loc << std::endl;
 }

@@ -2,6 +2,7 @@
 #include "Request.hpp"
 #include <cstring>
 #include <sstream>
+#include <iomanip>
 
 Server::Server() 
 {
@@ -87,11 +88,29 @@ void	Server::_delete_uri_variable(std::string & loc)
 		loc.erase(n, loc.size() - n);
 }
 
+void	Server::_decode_uri(std::string & loc)
+{
+	std::ostringstream ss;
+	std::string buf;
+	size_t n = 0;
+
+	while ((n = loc.find('%')) && n != std::string::npos && n < loc.size())
+	{
+		ss << static_cast<char>(HexToInt<int>(loc.substr(n + 1, 2)));
+		loc.erase(n, 3);
+		loc.insert(n, ss.str());
+		ss.str("");
+		ss.clear();
+		n++;
+	}
+}
+
 Route	Server::choose_route(const Request & req)
 {
 	std::string loc(split(req.req_line, ' ').at(1));
 	_delete_uri_variable(loc);
 	_convert_uri_dot(loc);
+	_decode_uri(loc);
 	std::vector<Route>::iterator it = routes.begin();
 	std::vector<Route>::iterator ite = routes.end();
 	while (it != ite)
