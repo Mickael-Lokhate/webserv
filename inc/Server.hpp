@@ -22,6 +22,12 @@ public:
 	void add_route(const Route & route);
 	Route choose_route(const Request & req);
 	void what();
+
+public:
+	void _delete_uri_variable(std::string & loc);
+	void _convert_uri_dot(std::string & loc);
+	void _remove_simple_dot(std::string & loc);
+	void _format_double_dot(std::string & loc);
 };
 
 std::vector<std::string> split(const std::string & tosplit, char delim);
