@@ -19,6 +19,8 @@ void	Loader::_treatment_location(t_vector_string_iterator &begin, Route &default
 		_treat_cgi(tmp_split, default_route);
 	else if (tmp_split.at(0).compare("upload") == 0)
 		_treat_upload(tmp_split, default_route);
+	else if (tmp_split.at(0).compare("error_page") == 0)
+		_treat_error_page(tmp_split, default_route);
 	else if (tmp_split.at(0).compare("location") == 0)
 		_treat_location(location_iterator, begin);
 	else
@@ -43,6 +45,8 @@ void	Loader::_treatment_server(t_vector_string_iterator &begin, Server &new_serv
 		_treat_return(tmp_split, default_route);
 	else if (tmp_split.at(0).compare("index") == 0)
 		_treat_index(tmp_split, default_route);
+	else if (tmp_split.at(0).compare("error_page") == 0)
+		_treat_error_page(tmp_split, default_route);
 	else if (tmp_split.at(0).compare("location") == 0)
 		_treat_location(location_iterator, begin);
 	else
@@ -162,6 +166,14 @@ void	Loader::_treat_upload(t_vector_string split_line, Route &default_route)
 	if (split_line.size() != 2)
 		throw SYNTAX_ERROR;
 	default_route.upload = split_line.at(1);
+}
+
+void	Loader::_treat_error_page(t_vector_string split_line, Route &default_route)
+{
+	if (split_line.size() < 3)
+		throw SYNTAX_ERROR;
+	for (size_t i = 1; i < split_line.size() - 1; ++i)
+		default_route.error_page.insert(std::make_pair(split_line.at(i), split_line.at(split_line.size() - 1)));
 }
 
 void	Loader::_get_location_name(t_vector_string  &split_line, Route &default_route)
