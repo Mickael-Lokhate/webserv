@@ -113,7 +113,7 @@ void	Loader::_treat_index(t_vector_string split_line, Route &default_route)
 	if (split_line.size() < 2)
 		throw SYNTAX_ERROR;
 	default_route.index.clear();
-	for (std::vector<std::string>::iterator tmp_it = split_line.begin() + 1; tmp_it != split_line.end(); ++tmp_it)
+	for (t_vector_string_iterator tmp_it = split_line.begin() + 1; tmp_it != split_line.end(); ++tmp_it)
 		default_route.index.push_back(*tmp_it);
 }
 

@@ -29,7 +29,7 @@ private:
 	Loader(void);
 	void	_parse_config(std::vector<Server> & servers);
 	void	_print_config(std::string curr_line) const;
-	void	_create_route(Server & server, Route &default_route, std::vector<std::vector<std::string>::iterator>& loc_it);	
+	void	_create_route(Server & server, Route &default_route, t_vector_iterator& loc_it);	
 	void	_fill_config_tab(void);
 
 	void	_treat_listen(t_vector_string split_line, Server &new_server);
@@ -52,6 +52,7 @@ private:
 	void	_treatment_location(t_vector_string_iterator &begin, Route &default_route, t_vector_iterator &location_iterator);
 	
 	std::string	_trim(const std::string &s);
+	std::string _trim_comments(const std::string &s);
 	std::string	_ltrim(const std::string &s);
 	std::string	_rtrim(const std::string &s);
 };

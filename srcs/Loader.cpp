@@ -29,7 +29,7 @@ void	Loader::_fill_config_tab(void)
 
 void	Loader::_parse_config(std::vector<Server> & servers)
 {
-	std::vector<std::string>::iterator	beg;
+	t_vector_string_iterator	beg;
 	
 	_fill_config_tab();	
 	for (beg = _config_tab.begin(); beg != _config_tab.end(); beg++)
@@ -62,14 +62,14 @@ void	Loader::_parse_config(std::vector<Server> & servers)
 	}
 }
 
-void	Loader::_create_route(Server & server, Route &default_route, std::vector<std::vector<std::string>::iterator>& loc_it)
+void	Loader::_create_route(Server & server, Route &default_route, t_vector_iterator& loc_it)
 {
-	for (std::vector<std::vector<std::string>::iterator>::iterator beg = loc_it.begin(); beg != loc_it.end(); ++beg)
+	for (t_vector_iterator::iterator beg = loc_it.begin(); beg != loc_it.end(); ++beg)
 	{
-		Route new_route(default_route);
-		std::vector<std::string> tmp_split = split(*(*beg), ' ');
-		std::vector<std::string>::iterator	line = ++(*beg);
-		std::vector<std::vector<std::string>::iterator> new_loc_vec;
+		Route 						new_route(default_route);
+		t_vector_string				tmp_split = split(*(*beg), ' ');
+		t_vector_string_iterator	line = ++(*beg);
+		t_vector_iterator			 new_loc_vec;
 
 		_get_location_name(tmp_split, new_route);
 		while ((*line).compare("}") != 0)
@@ -96,9 +96,15 @@ std::string Loader::_rtrim(const std::string &s)
     size_t end = s.find_last_not_of(" \r\t");
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
+
+std::string	Loader::_trim_comments(const std::string &s)
+{
+	size_t	pos = s.find("#");
+	return (pos == std::string::npos) ? s : s.substr(0, pos);
+}
  
 std::string Loader::_trim(const std::string &s) {
-    return _rtrim(_ltrim(s));
+    return _rtrim(_ltrim(_trim_comments(s)));
 }
 
 void	Loader::_print_config(std::string curr_line) const {
