@@ -161,6 +161,36 @@ void	Loader::_treat_location(t_vector_iterator &location_iterator, t_vector_stri
 	}
 }
 
+void	Loader::_treat_limit_except(t_vector_string split_line, Route &default_route)
+{
+	if (split_line.size() < 2)
+		throw std::runtime_error("Syntax error");
+	
+	default_route.limit_except.clear();
+	for (size_t i = 1; i < split_line.size(); i++)
+	{
+		if (split_line.at(i) != "GET" && split_line.at(i) != "POST"
+			&& split_line.at(i) != "PUT" && split_line.at(i) != "HEAD"
+			&& split_line.at(i) != "DELETE")	
+			throw std::runtime_error("Syntax error");
+		default_route.limit_except.push_back(split_line.at(i));
+	}
+}
+
+void	Loader::_treat_cgi(t_vector_string split_line, Route &default_route)
+{
+	if (split_line.size() != 2)
+		throw std::runtime_error("Syntax error");
+	default_route.cgi = split_line.at(1);
+}
+
+void	Loader::_treat_upload(t_vector_string split_line, Route &default_route)
+{
+	if (split_line.size() != 2)
+		throw std::runtime_error("Syntax error");
+	default_route.upload = split_line.at(1);
+}
+
 void	Loader::_print_config(std::string curr_line) const {
 	std::cout << curr_line << std::endl;
 }
@@ -206,78 +236,23 @@ void	Loader::_create_route(Server & server, Route &default_route, std::vector<st
 		{
 			tmp_split = split(*line, ' ');
 			if (tmp_split.at(0).compare("root") == 0)
-			{
-				if (tmp_split.size() <= 1)
-					throw std::runtime_error("Syntax error");
-				new_route.root.first = tmp_split.at(1);
-				if (tmp_split.size() == 3)
-				{
-					if (tmp_split.at(2).compare("alias") == 0)
-						new_route.root.second = true;
-					else
-						throw std::runtime_error("Syntax error");
-				}
-			}
+				_treat_root(tmp_split, new_route);	
 			else if (tmp_split.at(0).compare("autoindex") == 0)
-			{
-				if (tmp_split.size() != 2)
-					throw std::runtime_error("Syntax error");
-				new_route.autoindex = tmp_split.at(1);
-			}
+				_treat_autoindex(tmp_split, new_route);	
 			else if (tmp_split.at(0).compare("client_max_body_size") == 0)
-			{
-				if (tmp_split.size() != 2)
-					throw std::runtime_error("Syntax error");
-				new_route.max_body_size = tmp_split.at(1);
-			}
+				_treat_max_body_size(tmp_split, new_route);
 			else if (tmp_split.at(0).compare("return") == 0)
-			{
-				if (tmp_split.size() != 3)
-					throw std::runtime_error("Syntax error");
-				new_route.return_.first = tmp_split.at(1);
-				new_route.return_.second = tmp_split.at(2);
-			}
+				_treat_return(tmp_split, new_route);	
 			else if (tmp_split.at(0).compare("index") == 0)
-			{
-				if (tmp_split.size() < 2)
-					throw std::runtime_error("Syntax error");
-				new_route.index.clear();
-				for (std::vector<std::string>::iterator tmp_it = tmp_split.begin() + 1; tmp_it != tmp_split.end(); ++tmp_it)
-					new_route.index.push_back(*tmp_it);
-			}
+				_treat_index(tmp_split, new_route);	
 			else if (tmp_split.at(0).compare("limit_except") == 0)
-			{
-				if (tmp_split.size() < 2)
-					throw std::runtime_error("Syntax error");
-				
-				new_route.limit_except.clear();
-				for (size_t i = 1; i < tmp_split.size(); i++)
-				{
-					if (tmp_split.at(i) != "GET" && tmp_split.at(i) != "POST"
-						&& tmp_split.at(i) != "PUT" && tmp_split.at(i) != "HEAD"
-						&& tmp_split.at(i) != "DELETE")	
-						throw std::runtime_error("Syntax error");
-					new_route.limit_except.push_back(tmp_split.at(i));
-				}
-			}
+				_treat_limit_except(tmp_split, new_route);
 			else if (tmp_split.at(0).compare("cgi") == 0)
-			{
-				if (tmp_split.size() != 2)
-					throw std::runtime_error("Syntax error");
-				new_route.cgi = tmp_split.at(1);
-			}
+				_treat_cgi(tmp_split, new_route);
 			else if (tmp_split.at(0).compare("upload") == 0)
-			{
-				if (tmp_split.size() != 2)
-					throw std::runtime_error("Syntax error");
-				new_route.upload = tmp_split.at(1);
-			}
+				_treat_upload(tmp_split, new_route);
 			else if (tmp_split.at(0).compare("location") == 0)
-			{
-				new_loc_vec.push_back(line);
-				while ((*line).compare("}") != 0)
-					++(line);
-			}
+				_treat_location(new_loc_vec, line);
 			else
 				throw std::runtime_error("Syntax error");
 			++(line);

@@ -38,6 +38,10 @@ private:
 	void	_treat_max_body_size(t_vector_string split_line, Route &default_route);
 	void	_treat_return(t_vector_string split_line, Route &default_route);
 	void	_treat_index(t_vector_string split_line, Route &default_route);
+	void	_treat_limit_except(t_vector_string split_line, Route &default_route);
+	void	_treat_cgi(t_vector_string split_line, Route &default_route);
+	void	_treat_upload(t_vector_string split_line, Route &default_route);
+
 	void	_treat_location(t_vector_iterator &location_iterator, t_vector_string_iterator &it);
 	
 	std::string	_trim(const std::string &s);
