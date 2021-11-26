@@ -3,6 +3,8 @@
 #include <fstream>
 #include <vector>
 #include <algorithm>
+#include <iostream>
+#include "utils.hpp"
 #include "Server.hpp"
 #include "Route.hpp"
 

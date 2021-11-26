@@ -4,6 +4,7 @@ EXE_NAME="loader.exe"
 CONF_PATH="./confs/*"
 INC_PATH="../inc"
 SRCS_PATH="../srcs/"
+OUT_PATH="./test_output/"
 
 Reset='\033[0m'       # Text Reset
 Black='\033[0;30m'        # Black
@@ -17,17 +18,24 @@ White='\033[0;37m'
 
 echo -e "To redirect the output of each test add 1 argument\n"
 echo -e "${Red}Compiling....${Reset}\n"
-clang++ -Wall -Wextra -I$INC_PATH -g -fsanitize=address ${SRCS_PATH}Loader.cpp ${SRCS_PATH}Server.cpp ${SRCS_PATH}Route.cpp ${SRCS_PATH}LoaderTreatment.cpp ./main_test_loader.cpp -o ${EXE_NAME}
+clang++ -Wall -Wextra -I$INC_PATH -g -fsanitize=address ${SRCS_PATH}Loader.cpp ${SRCS_PATH}Server.cpp ${SRCS_PATH}Route.cpp ${SRCS_PATH}loader_treatment.cpp ${SRCS_PATH}utils.cpp ./main_test_loader.cpp -o ${EXE_NAME}
 
 i=1
 if test -f "./${EXE_NAME}"
 then
 	for f in $CONF_PATH
 	do
-		echo -e "${Blue}Executing Test nº$i${Reset} - ${Red}FILE : $f${Reset}"
+		echo -e "${Cyan}+ Executing Test nº$i${Reset} - ${Purple}FILE : $f${Reset}"
 		if [ $# -eq 1 ] 
 		then
-			./${EXE_NAME} $f > test_output/test_${i}.out
+			./${EXE_NAME} $f > ${OUT_PATH}test_${i}.out
+			diff ./confs/error_msg.out ${OUT_PATH}test_${i}.out > diff.txt
+			if [ -s diff.txt ]
+			then
+				echo -e "${Green}=> Configuration file passed the parsing${Reset}\n"
+			else
+				echo -e "${Red}=> Configuration file do not passed the parsing, an error has been thrown${Reset}\n"
+			fi
 		else
 			./${EXE_NAME} $f 
 		fi
@@ -35,9 +43,9 @@ then
 	done
 	if [ $# -eq 1 ]
 	then
-		echo -e "\n${Green}The output of each tests has been redirected in a file test_<test number>.out in the test_output folder$	{Reset}"
+		echo -e "\n${Green}The output of each tests has been redirected in a file test_<test number>.out in the test_output folder${Reset}"
 	fi
 else
 	echo -e "\n${Red}Error: Compilation Failed${Reset}"
 fi
-rm -rf ${EXE_NAME} ${EXE_NAME}.dSYM
+rm -rf ${EXE_NAME} ${EXE_NAME}.dSYM diff.txt
