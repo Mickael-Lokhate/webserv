@@ -6,7 +6,9 @@ class Request {
 
 	public:
 
-	std::string						req_line;
+	std::string						method;
+	std::string						uri;
+	std::string						protocol;
 	std::map<std::string, std::string>	headers;
 	std::string 						body;
 
