@@ -16,7 +16,8 @@ std::vector<std::string> split(const std::string & tosplit, char delim)
 	std::vector<std::string> tokens;
 
 	while (getline(ss, buf, delim))
-		tokens.push_back(buf);
+		if (!buf.empty())
+			tokens.push_back(buf);
 
 	return tokens;
 
