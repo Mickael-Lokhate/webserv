@@ -63,10 +63,8 @@ void Worker::new_client(int i)
 		if ((new_client = accept(_event_list[i].ident,
 						(struct sockaddr *)&from, &slen)) == -1)
 			throw std::runtime_error(std::string(strerror(errno)));
-		/*
 		update_modif_list(new_client, EVFILT_TIMER,
 			EV_ADD, NOTE_SECONDS, TO_HEADERS);
-		*/
 		update_modif_list(new_client, EVFILT_READ, EV_ADD);
 		char buffer[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &(from.sin_addr), buffer, INET_ADDRSTRLEN);
@@ -79,15 +77,6 @@ void Worker::new_client(int i)
 		std::cout << "\n";
 #endif
 	}
-}
-
-bool is_request(void)
-{
-	static int j;
-
-	if (++j == 1)
-		return true;
-	return false;
 }
 
 void Worker::recv_client(int i)
@@ -217,7 +206,7 @@ void Worker::event_loop(void)
 						del_client(i);
 					else
 					{
-						/* réception client, TODO: dissocier IO et socket */
+						/* réception client */
 						if (_event_list[i].filter == EVFILT_READ)
 						{
 							if (_event_list[i].udata)

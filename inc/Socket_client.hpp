@@ -4,12 +4,8 @@
 #include "Request.hpp"
 
 typedef enum http_state { 
-	hHEADERS,
-	hBODY,
-	hRESPONSE,
-	hIO,
-	hREADY,
-	hSEND,
+	HEADERS,
+	BODY,
 } e_http_state;
 
 class Socket_client {	

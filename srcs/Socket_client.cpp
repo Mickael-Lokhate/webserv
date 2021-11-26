@@ -10,7 +10,7 @@ Socket_client::Socket_client(int fd, const std::string & addr,
 	fd(fd),
 	addr(addr),
 	port(port),
-	state(hHEADERS)
+	state(HEADERS)
 {
 }
 
@@ -35,28 +35,23 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	return *this;
 }
 
+bool process_header(void)
+{
+}
+
+bool process_body(void)
+{
+}
+
 /* parser */
 bool Socket_client::build_request()
 {
 	return true;
 		/*
 		if (state == HEADER)
-		{
-			if (request.state == STATUS_LINE)
-				process_request_line();
-			else 
-				process_headers();
-		}
+			process_header();
 		if (state == BODY)
 			process_body();
-		if (state == RESPONSE)
-			build_response();
-		if (state == IO)
-			process_io();
-		if (state == READY)
-			process_ready();
-		if (state == SEND)
-			process_send();
 		*/
 
 	//	1 - REQUEST_LINE - Getline(stream, "\r\n")
