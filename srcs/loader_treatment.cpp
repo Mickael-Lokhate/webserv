@@ -92,6 +92,8 @@ void	Loader::_treat_autoindex(t_vector_string split_line, Route &default_route)
 {
 	if (split_line.size() != 2)
 		throw SYNTAX_ERROR;
+	if (split_line.at(1).compare("on") != 0 && split_line.at(1).compare("off") != 0)
+		throw SYNTAX_ERROR;
 	default_route.autoindex = split_line.at(1);
 }
 
