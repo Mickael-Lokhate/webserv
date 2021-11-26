@@ -34,6 +34,8 @@ private:
 	void	_create_route(Server & server, Route &default_route, t_vector_iterator& loc_it);	
 	void	_fill_config_tab(void);
 	void	_add_server_to_vector(std::vector<Server>& servers, const Server& new_server);
+	
+	void	_check_ip(const std::string& ip);
 
 	void	_treat_listen(t_vector_string split_line, Server &new_server);
 	void	_treat_server_name(t_vector_string split_line, Server &new_server);

@@ -96,7 +96,6 @@ void	Loader::_create_route(Server & server, Route &default_route, t_vector_itera
 		t_vector_string				tmp_split = split(*(*beg), ' ');
 		t_vector_string_iterator	line = ++(*beg);
 		t_vector_iterator			 new_loc_vec;
-
 		_get_location_name(tmp_split, new_route);
 		while ((*line).compare("}") != 0)
 		{

@@ -17,3 +17,18 @@ T	HexToInt(const std::string &str)
 	iss >> std::hex >> result;
 	return result;
 }
+
+template < class T >
+T	to_number(std::string& s)
+{
+	std::stringstream	ss(s);
+	T					num;
+	ss >> num;
+	return num;
+}
+
+template < class T >
+bool	is_in_range(T nb, T r1, T r2)
+{
+	return (r2 >= nb >= r1);
+}

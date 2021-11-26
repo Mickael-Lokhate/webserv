@@ -23,6 +23,7 @@ void	Loader::_treatment_common(t_vector_string split_line, t_vector_string_itera
 void	Loader::_treatment_location(t_vector_string_iterator &begin, Route &default_route, t_vector_iterator &location_iterator)
 {
 	t_vector_string	tmp_split = split(*begin, ' ');
+	
 	if (tmp_split.at(0).compare("limit_except") == 0)
 		_treat_limit_except(tmp_split, default_route);
 	else if (tmp_split.at(0).compare("cgi") == 0)
@@ -59,6 +60,7 @@ void	Loader::_treat_listen(t_vector_string split_line, Server &new_server)
 	{
 		if (!is_number(split_line.at(2)))
 			throw SYNTAX_ERROR;
+		_check_ip(new_server.address);
 		new_server.address = split_line.at(1);
 		new_server.port = split_line.at(2);
 	}
@@ -196,6 +198,18 @@ void	Loader::_treat_error_page(t_vector_string split_line, Route &default_route)
 	}
 }
 
+void	Loader::_check_ip(const std::string& ip)
+{
+	t_vector_string	tmp_split = split(ip, '.');
+	if (tmp_split.size() != 4)
+		throw SYNTAX_ERROR;
+	for (t_vector_string_iterator it = tmp_split.begin(); it != tmp_split.end(); ++it)
+	{
+		if (!is_in_range(to_number<int>(*it), 0, 255))
+			throw SYNTAX_ERROR;
+	}
+}
+
 void	Loader::_get_location_name(t_vector_string  &split_line, Route &default_route)
 {
 	if (split_line.size() < 2 || split_line.size() > 3)
@@ -207,11 +221,18 @@ void	Loader::_get_location_name(t_vector_string  &split_line, Route &default_rou
 	if (split_line.at(1).find(".") != std::string::npos)
 	{
 		split_line = split(split_line.at(1), '.');
-		if (split_line.size() != 2)
-			throw SYNTAX_ERROR;
-		if (!(split_line.at(0).empty()))
+		if (split_line.size() == 2)
+		{
 			default_route.location = split_line.at(0);
-		default_route.ext = split_line.at(1);
+			default_route.ext = split_line.at(1);
+		}
+		else if (split_line.size() == 1)
+		{
+			default_route.location = "";
+			default_route.ext = split_line.at(0);
+		}
+		else
+			throw SYNTAX_ERROR;
 	}
 	else
 		default_route.location = split_line.at(1);
