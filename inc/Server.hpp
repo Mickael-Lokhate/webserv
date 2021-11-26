@@ -12,10 +12,10 @@
 class Server
 {
 public:
-	std::string			address;
-	std::string			port;
-	std::string			server_name;
-	std::vector<Route>	routes;
+	std::string					address;
+	std::string					port;
+	std::vector<std::string>	server_name;
+	std::vector<Route>			routes;
 	
 public:
 	Server();

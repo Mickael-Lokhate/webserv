@@ -66,9 +66,11 @@ void	Loader::_treat_listen(t_vector_string split_line, Server &new_server)
 
 void	Loader::_treat_server_name(t_vector_string split_line, Server &new_server)
 {
-	if (split_line.size() <= 1)
+	if (split_line.size() < 2)
 		throw SYNTAX_ERROR;
-	new_server.server_name = split_line.at(1);
+	new_server.server_name.clear();
+	for (t_vector_string_iterator it = split_line.begin() + 1; it != split_line.end(); it++)
+		new_server.server_name.push_back(*it);
 }
 
 void	Loader::_treat_root(t_vector_string split_line, Route &default_route)

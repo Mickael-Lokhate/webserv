@@ -7,7 +7,7 @@
 Server::Server() 
 {
 	address = "127.0.0.1";
-	server_name = "localhost";
+	server_name.push_back("localhost");
 	port = "8080";
 	Route newroute;
 	routes.push_back(newroute);
@@ -130,12 +130,13 @@ void	Server::what()
 	std::cout << "------ Server ------" << std::endl;
 	std::vector<Route>::iterator it = routes.begin();
 	std::vector<Route>::iterator ite = routes.end();
-
+	std::vector<std::string>::iterator it_serv = server_name.begin();
 
 	std::cout << "address : " << address << std::endl;
 	std::cout << "port : " << port << std::endl;
-	std::cout << "server_name : " << server_name << std::endl;
-	
+	std::cout << "server_name : " << std::endl;
+	for (;it_serv != server_name.end(); ++it_serv)
+		std::cout << "	" << *it_serv << std::endl;
 	while (it != ite)
 	{
 		it.base()->what();
