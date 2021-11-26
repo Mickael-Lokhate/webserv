@@ -134,11 +134,13 @@ Route	Server::choose_route(const std::string & req)
 		while (it_route != ite_route)
 		{
 			std::cout << "*it_route : " << *it_route << std::endl;
-			std::cout << "*it_loc : " << loc_tk.at(1) << std::endl;
-			if (*it_route++ == *it_loc++)
-				tmpn_match++;
-			else
+			std::cout << "*it_loc : " << *it_loc << std::endl;
+			if (*it_route++ != *it_loc++)
+			{
+				tmpn_match = 0;
 				break;
+			}
+			tmpn_match++;
 		}
 		if (tmpn_match > n_match)
 			best_match = *(it);
@@ -147,7 +149,7 @@ Route	Server::choose_route(const std::string & req)
 	// Iterate through routes and wait for the LONGEST uri match paired with the right ext -> atm exact matching
 	// if found return the route
 	// if not return default route (first route if not set /);
-	return *(routes.begin());
+	return best_match;
 }
 
 void	Server::what()
