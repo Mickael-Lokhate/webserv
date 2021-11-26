@@ -6,7 +6,7 @@
 /*   By: aclerac <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/11/22 15:45:49 by aclerac           #+#    #+#             */
-/*   Updated: 2021/11/24 19:39:50 by aclerac          ###   ########.fr       */
+/*   Updated: 2021/11/26 10:40:37 by aclerac          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,10 @@
 #include <sys/time.h>
 #include "Socket_server.hpp"
 #include "Socket_client.hpp"
-#define MAX_EVENTS 1024
+#define TO_HEADERS 60
+#define TO_BODY 60
+#define TO_RESPONSE 60
+#define TO_SEND 60
 
 class Worker {
 
@@ -39,11 +42,17 @@ class Worker {
 	void	register_socket_servers(void);
 	void	update_modif_list(int fd, int16_t filter,
 				uint16_t flags = 0, uint32_t fflags = 0,
-				intptr_t data = 0);
+				intptr_t data = 0, void *udata = 0);
+
 	void	new_client(int i);
+	void	del_client(int i);
+
 	void	recv_client(int i);
 	void	send_client(int i);
-	void	del_client(int i);
+
+	void	process_client(int i);
+	void	read_client(int i);
+	void	write_client(int i);
 	
 	std::vector<struct kevent>		_event_list;
 	std::vector<struct kevent>		_modif_list;
@@ -105,5 +114,3 @@ class Worker {
 		|               +---------------------------------------------------+ |
 		+---------------------------------------------------------------------++
 */
-
-

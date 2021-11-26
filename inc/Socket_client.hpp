@@ -1,14 +1,28 @@
 #pragma once
 #include <string>
+#include <queue>
+#include "Request.hpp"
+
+typedef enum http_state { 
+	hHEADERS,
+	hBODY,
+	hRESPONSE,
+	hIO,
+	hREADY,
+	hSEND,
+} e_http_state;
 
 class Socket_client {	
 
 	public:
 
-	int			fd;
-	std::string buff;
-	std::string addr;
-	std::string port;
+	int				fd;
+	//Request			request;
+	std::string		buffer_recv;
+	std::string		buffer_send;
+	std::string		addr;
+	std::string		port;
+	e_http_state	state;
 
 	Socket_client(void);
 	Socket_client(int fd, const std::string & addr, 
@@ -17,13 +31,7 @@ class Socket_client {
 	~Socket_client(void);
 	Socket_client & operator=(const Socket_client & ref);
 
-	/* parser */
-	void build_request(const std::string & raw_data);
-	/* builder */
+	bool build_request(void);
 	void build_response(void);
 	void what(void) const;
-
-
 };
-
-

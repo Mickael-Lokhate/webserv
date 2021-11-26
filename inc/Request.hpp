@@ -2,7 +2,6 @@
 #include <string>
 #include <map>
 
-
 class Request {
 
 	public:
@@ -19,3 +18,4 @@ class Request {
 	Request & operator=(const Request & ref);
 	void what(void) const;
 };
+
