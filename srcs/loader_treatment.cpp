@@ -60,7 +60,7 @@ void	Loader::_treat_listen(t_vector_string split_line, Server &new_server)
 	{
 		if (!is_number(split_line.at(2)))
 			throw SYNTAX_ERROR;
-		_check_ip(new_server.address);
+		_check_ip(split_line.at(1));
 		new_server.address = split_line.at(1);
 		new_server.port = split_line.at(2);
 	}
@@ -205,6 +205,8 @@ void	Loader::_check_ip(const std::string& ip)
 		throw SYNTAX_ERROR;
 	for (t_vector_string_iterator it = tmp_split.begin(); it != tmp_split.end(); ++it)
 	{
+		if (!is_number(*it))
+			throw SYNTAX_ERROR;
 		if (!is_in_range(to_number<int>(*it), 0, 255))
 			throw SYNTAX_ERROR;
 	}

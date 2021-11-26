@@ -30,5 +30,5 @@ T	to_number(std::string& s)
 template < class T >
 bool	is_in_range(T nb, T r1, T r2)
 {
-	return (r2 >= nb >= r1);
+	return ((nb >= r1 && nb <= r2) ? true : false);
 }
