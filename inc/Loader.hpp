@@ -3,6 +3,8 @@
 #include <fstream>
 #include <vector>
 #include <algorithm>
+#include <iostream>
+#include "utils.hpp"
 #include "Server.hpp"
 #include "Route.hpp"
 
@@ -31,6 +33,7 @@ private:
 	void	_print_config(std::string curr_line) const;
 	void	_create_route(Server & server, Route &default_route, t_vector_iterator& loc_it);	
 	void	_fill_config_tab(void);
+	void	_add_server_to_vector(std::vector<Server>& servers, const Server& new_server);
 
 	void	_treat_listen(t_vector_string split_line, Server &new_server);
 	void	_treat_server_name(t_vector_string split_line, Server &new_server);

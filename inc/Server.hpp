@@ -6,16 +6,17 @@
 #include <vector>
 #include <sstream>
 #include <iomanip>
+#include "utils.hpp"
 #include "Route.hpp"
 #include "Request.hpp"
 
 class Server
 {
 public:
-	std::string			address;
-	std::string			port;
-	std::string			server_name;
-	std::vector<Route>	routes;
+	std::string					address;
+	std::string					port;
+	std::vector<std::string>	server_name;
+	std::vector<Route>			routes;
 	
 public:
 	Server();
@@ -34,15 +35,3 @@ public:
 	void _delete_duplicate_slash(std::string & loc);
 };
 
-template<class T>
-T	HexToInt(const std::string &str)
-{
-	if(str.size()==0)
-		return 0;
-	std::istringstream iss(str);
-	T	result = 0;
-	iss >> std::hex >> result;
-	return result;
-}
-
-std::vector<std::string> split(const std::string & tosplit, char delim);

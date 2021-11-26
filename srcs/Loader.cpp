@@ -54,12 +54,38 @@ void	Loader::_parse_config(std::vector<Server> & servers)
 			new_server.routes.clear();
 			new_server.add_route(default_route);
 			_create_route(new_server, default_route, loc_it);
-			new_server.what();
-			servers.push_back(new_server);
+			_add_server_to_vector(servers, new_server);
 		}
 		else
 			throw SYNTAX_ERROR;
 	}
+}
+
+void	Loader::_add_server_to_vector(std::vector<Server>& servers, const Server& new_server)
+{
+	std::vector<Server>::iterator	it = servers.begin();
+	for (; it != servers.end(); ++it)
+	{
+		if ((*it).address.compare(new_server.address) == 0)
+		{
+			if ((*it).port.compare(new_server.port) == 0)
+			{
+				t_vector_string_iterator it_serv = (*it).server_name.begin();
+				std::vector<std::string>::const_iterator it_new_serv = new_server.server_name.begin();
+				for (; it_new_serv != new_server.server_name.end(); ++it_new_serv)
+				{
+					for (it_serv = (*it).server_name.begin(); it_serv != (*it).server_name.end(); ++it_serv)
+					{
+						if ((*it_new_serv).compare(*it_serv) == 0)
+						{
+							throw SYNTAX_ERROR;
+						}
+					}
+				}
+			}
+		}
+	}
+	servers.push_back(new_server);
 }
 
 void	Loader::_create_route(Server & server, Route &default_route, t_vector_iterator& loc_it)
