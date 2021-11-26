@@ -6,6 +6,7 @@
 #include <vector>
 #include <sstream>
 #include <iomanip>
+#include "utils.hpp"
 #include "Route.hpp"
 #include "Request.hpp"
 
@@ -33,15 +34,3 @@ public:
 	void _decode_uri(std::string & loc);
 };
 
-template<class T>
-T	HexToInt(const std::string &str)
-{
-	if(str.size()==0)
-		return 0;
-	std::istringstream iss(str);
-	T	result = 0;
-	iss >> std::hex >> result;
-	return result;
-}
-
-std::vector<std::string> split(const std::string & tosplit, char delim);

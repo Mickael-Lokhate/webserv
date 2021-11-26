@@ -18,20 +18,6 @@ Server::~Server()
 	;
 }
 
-std::vector<std::string> split(const std::string & tosplit, char delim)
-{
-	std::string buf;
-	std::stringstream ss(tosplit);
-
-	std::vector<std::string> tokens;
-
-	while (getline(ss, buf, delim))
-		tokens.push_back(buf);
-	
-	return tokens;
-
-}
-
 void	Server::add_route(const Route & route)
 {
 	routes.push_back(route);

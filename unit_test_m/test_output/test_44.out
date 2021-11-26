@@ -184,9 +184,10 @@ error_page :
 	604 /604.html
 return : 
 	400 http://google.fr
-ext : html
+ext : php
 index :
 	hello.html
+	index.php
 	index.hml
 cgi : 
 upload : uploads
