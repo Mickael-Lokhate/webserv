@@ -105,18 +105,57 @@ void	Server::_decode_uri(std::string & loc)
 	}
 }
 
-Route	Server::choose_route(const Request & req)
+void	Server::_delete_duplicate_slash(std::string & loc)
 {
-	std::string loc(split(req.req_line, ' ').at(1));
+	size_t n = 0;
+	while ((n = loc.find("//")) && n != std::string::npos)
+		loc.erase(n, 1);
+}
+
+Route	Server::choose_route(const std::string & req)
+{
+	std::string loc(split(req, ' ').at(1));
 	_delete_uri_variable(loc);
 	_convert_uri_dot(loc);
 	_decode_uri(loc);
+	_delete_duplicate_slash(loc);
 	std::vector<Route>::iterator it = routes.begin();
 	std::vector<Route>::iterator ite = routes.end();
+	std::vector<std::string> loc_tk(split(loc, '/'));
+	std::vector<std::string>::iterator it_loc;
+	std::vector<std::string>::iterator ite_loc;
+	std::vector<std::string> routes_tk;
+	std::vector<std::string>::iterator it_route;
+	std::vector<std::string>::iterator ite_route;
+	Route best_match = routes.at(0);
+	size_t n_match = 0;
+	size_t tmpn_match = 0;
 	while (it != ite)
 	{
-		if (!(it.base()->location.compare(loc)))
-			return *it;
+		routes_tk = split(it->location, '/');
+		it_route = routes_tk.begin();
+		ite_route = routes_tk.end();
+		it_loc = loc_tk.begin();
+		ite_loc = loc_tk.end();
+		tmpn_match = 0;
+		// std::cout << "[" << it->ext.empty() << "]" << std::endl;
+		std::cout << "[" << (ite_loc - 1)->size() << "]" << std::endl;
+		if (it->ext.empty() && (ite_loc - 1)->size() > 3)
+			if ((ite_loc - 1)->find(it->ext, (ite_loc - 1)->size() - 3) == std::string::npos)
+				continue;
+		std::cout << "HERE" << std::endl;
+		std::cout << it->location << std::endl;
+		while (it_route != ite_route)
+		{
+			std::cout << "*it_route : " << *it_route << std::endl;
+			std::cout << "*it_loc : " << loc_tk.at(1) << std::endl;
+			if (*it_route++ == *it_loc++)
+				tmpn_match++;
+			else
+				break;
+		}
+		if (tmpn_match > n_match)
+			best_match = *(it);
 		it++;
 	}
 	// Iterate through routes and wait for the LONGEST uri match paired with the right ext -> atm exact matching

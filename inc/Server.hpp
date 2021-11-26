@@ -22,7 +22,7 @@ public:
 	~Server();
 
 	void add_route(const Route & route);
-	Route choose_route(const Request & req);
+	Route choose_route(const std::string & req);
 	void what();
 
 public:
@@ -31,6 +31,7 @@ public:
 	void _remove_simple_dot(std::string & loc);
 	void _format_double_dot(std::string & loc);
 	void _decode_uri(std::string & loc);
+	void _delete_duplicate_slash(std::string & loc);
 };
 
 template<class T>
