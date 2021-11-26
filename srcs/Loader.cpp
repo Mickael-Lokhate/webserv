@@ -13,6 +13,8 @@ Loader::~Loader(void)
 void	Loader::add_servers(std::vector<Server> & servers)
 {
 	_parse_config(servers);
+	for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
+		it->what();
 }
 
 void	Loader::_fill_config_tab(void)

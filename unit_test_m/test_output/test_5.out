@@ -1,2 +1,272 @@
 Loader start
+------ Server ------
+address : 193.68d.32.1
+port : 4845
+server_name : 
+	hello
+	webserver
+	42webserv
+------ Route :  ------
+alias : /test/root/parsing
+autoindex : on
+max_body_size : 2
+limit_except : 
+error_page : 
+	400 /40x.html
+	401 /40x.html
+	402 /40x.html
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+return : 
+	400 http://google.fr
+ext : 
+index :
+	index.html
+	ind.html
+	i.html
+	index.php
+	i.php
+cgi : 
+upload : uploads
+------ Route : / ------
+alias : /var/www/YoupiBanane
+autoindex : off
+max_body_size : 2
+limit_except : 
+	GET
+error_page : 
+	305 /305.html
+	400 /40x.html
+	401 /40x.html
+	402 /40x.html
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+return : 
+	400 http://google.fr
+ext : 
+index :
+	youpi.bad_extension
+cgi : 
+upload : uploads
+------ Route : /put_test/ ------
+alias : /test/root/parsing
+autoindex : on
+max_body_size : 2
+limit_except : 
+	PUT
+	GET
+	POST
+error_page : 
+	400 /40x.html
+	401 /40x.html
+	402 /40x.html
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+return : 
+	400 http://google.fr
+ext : 
+index :
+	index.html
+	ind.html
+	i.html
+	index.php
+	i.php
+cgi : 
+upload : /upload/
+------ Route : /post_body ------
+alias : /test/root/parsing
+autoindex : on
+max_body_size : 100
+limit_except : 
+	POST
+error_page : 
+	400 /40x.html
+	401 /40x.html
+	402 /40x.html
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+return : 
+	400 http://google.fr
+ext : 
+index :
+	index.html
+	ind.html
+	i.html
+	index.php
+	i.php
+cgi : 
+upload : uploads
+------ Route : /directory ------
+alias : /var/www/YoupiBanane
+autoindex : on
+max_body_size : 2
+limit_except : 
+	GET
+error_page : 
+	400 /40x.html
+	401 /40x.html
+	402 /40x.html
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+return : 
+	400 http://google.fr
+ext : 
+index :
+	youpi.bad_extension
+cgi : 
+upload : uploads
+------ Route : /directory ------
+alias : /test/imbrication
+autoindex : on
+max_body_size : 2
+limit_except : 
+	GET
+error_page : 
+	400 /40x.html
+	401 /40x.html
+	402 /40x.html
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+return : 
+	400 http://google.fr
+ext : php
+index :
+	youpi.bad_extension
+cgi : 
+upload : uploads
+------ Route : /test_loc/index ------
+alias : /test_loc/
+autoindex : on
+max_body_size : 2
+limit_except : 
+	POST
+error_page : 
+	400 /40x.html
+	401 /40x.html
+	402 /40x.html
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+	604 /604.html
+return : 
+	400 http://google.fr
+ext : php
+index :
+	hello.html
+	index.php
+	index.hml
+cgi : 
+upload : uploads
+------ Route :  ------
+alias : /test/imbrication
+autoindex : on
+max_body_size : 2
+limit_except : 
+	GET
+error_page : 
+	400 /40x.html
+	401 /40x.html
+	402 /40x.html
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+return : 
+	400 http://google.fr
+ext : bla
+index :
+	index.html
+	ind.html
+	i.html
+	index.php
+	i.php
+cgi : 
+upload : uploads
+------ Server ------
+address : 127.0.0.1
+port : 80
+server_name : 
+	test
+------ Route :  ------
+root : /www
+autoindex : off
+max_body_size : 1 000 000
+limit_except : 
+error_page : 
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+return : 
+	 
+ext : 
+index :
+	index.html
+cgi : 
+upload : uploads
+------ Server ------
+address : 127.0.0.1
+port : 80
+server_name : 
+	hey
+------ Route :  ------
+root : /www
+autoindex : off
+max_body_size : 1 000 000
+limit_except : 
+error_page : 
+	403 error/403.html
+	404 error/404.html
+	500 error/50x.html
+	501 error/501.html
+	502 error/50x.html
+	503 error/50x.html
+	504 error/50x.html
+return : 
+	 
+ext : 
+index :
+	index.html
+cgi : 
+upload : uploads
 Loader destruction

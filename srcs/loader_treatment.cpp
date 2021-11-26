@@ -228,7 +228,6 @@ void	Loader::_get_location_name(t_vector_string  &split_line, Route &default_rou
 		}
 		else if (split_line.size() == 1)
 		{
-			default_route.location = "";
 			default_route.ext = split_line.at(0);
 		}
 		else
