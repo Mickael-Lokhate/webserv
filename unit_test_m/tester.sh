@@ -29,8 +29,9 @@ then
 		if [ $# -eq 1 ] 
 		then
 			./${EXE_NAME} $f > ${OUT_PATH}test_${i}.out
-			diff ./confs/error_msg.out ${OUT_PATH}test_${i}.out > diff.txt
-			if [ -s diff.txt ]
+			j=$(cat ${OUT_PATH}test_${i}.out | wc -l)
+			#diff ./confs/error_msg.out ${OUT_PATH}test_${i}.out > diff.txt
+			if [ $j -ne 3 ]
 			then
 				echo -e "${Green}=> Configuration file passed the parsing${Reset}\n"
 			else

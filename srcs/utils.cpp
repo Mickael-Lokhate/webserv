@@ -22,3 +22,9 @@ std::vector<std::string> split(const std::string & tosplit, char delim)
 	return tokens;
 
 }
+
+void	syntax_error(unsigned int line, const std::string &c)
+{
+	std::string str = "Syntax error near '" + c + "' at line " + to_string(line); 
+	throw std::runtime_error(str);
+}
