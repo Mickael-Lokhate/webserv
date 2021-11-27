@@ -6,6 +6,7 @@
 
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);
+void						syntax_error(unsigned int line, const std::string &c);
 
 template<class T>
 T	HexToInt(const std::string &str)
@@ -25,6 +26,14 @@ T	to_number(std::string& s)
 	T					num;
 	ss >> num;
 	return num;
+}
+
+template < class T >
+std::string	to_string(T &n)
+{
+	std::stringstream ss;
+	ss << n;
+	return ss.str();
 }
 
 template < class T >
