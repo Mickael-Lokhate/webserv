@@ -61,10 +61,13 @@ void	Server::_format_double_dot(std::string & loc)
 	}
 }
 
-void	Server::_convert_uri_dot(std::string & loc)
+void	Server::_format_uri(std::string & loc)
 {
+	_delete_uri_variable(loc);
 	_remove_simple_dot(loc);
 	_format_double_dot(loc);
+	_decode_uri(loc);
+	_delete_duplicate_slash(loc);
 }
 
 void	Server::_delete_uri_variable(std::string & loc)
@@ -101,10 +104,7 @@ void	Server::_delete_duplicate_slash(std::string & loc)
 Route	Server::choose_route(const std::string & req)
 {
 	std::string loc(split(req, ' ').at(1));
-	_delete_uri_variable(loc);
-	_convert_uri_dot(loc);
-	_decode_uri(loc);
-	_delete_duplicate_slash(loc);
+	_format_uri(loc);
 	std::vector<Route>::iterator it = routes.begin();
 	std::vector<Route>::iterator ite = routes.end();
 	std::vector<std::string> loc_tk(split(loc, '/'));
@@ -124,31 +124,48 @@ Route	Server::choose_route(const std::string & req)
 		it_loc = loc_tk.begin();
 		ite_loc = loc_tk.end();
 		tmpn_match = 0;
-		// std::cout << "[" << it->ext.empty() << "]" << std::endl;
-		std::cout << "[" << (ite_loc - 1)->size() << "]" << std::endl;
-		if (it->ext.empty() && (ite_loc - 1)->size() > 3)
-			if ((ite_loc - 1)->find(it->ext, (ite_loc - 1)->size() - 3) == std::string::npos)
-				continue;
-		std::cout << "HERE" << std::endl;
-		std::cout << it->location << std::endl;
 		while (it_route != ite_route)
 		{
-			std::cout << "*it_route : " << *it_route << std::endl;
-			std::cout << "*it_loc : " << *it_loc << std::endl;
 			if (*it_route++ != *it_loc++)
-			{
-				tmpn_match = 0;
 				break;
-			}
 			tmpn_match++;
 		}
 		if (tmpn_match > n_match)
-			best_match = *(it);
+			n_match = tmpn_match;
 		it++;
 	}
-	// Iterate through routes and wait for the LONGEST uri match paired with the right ext -> atm exact matching
-	// if found return the route
-	// if not return default route (first route if not set /);
+	std::vector<Route> locs_match;
+	it = routes.begin();
+	ite = routes.end();
+	while (it != ite)
+	{
+		it_route = routes_tk.begin();
+		ite_route = routes_tk.end();
+		it_loc = loc_tk.begin();
+		ite_loc = loc_tk.end();
+		tmpn_match = 0;
+		while (*it_route++ != *it_loc++)
+		{
+			if (*it_route++ != *it_loc++)
+				break;
+			tmpn_match++;
+		}
+		if (tmpn_match == n_match)
+			locs_match.push_back(*it);
+	}
+	it = locs_match.begin();
+	ite = locs_match.end();
+	while (it != ite)
+	{
+		if ((it->ext == ".php") && ((ite_loc - 1)->rfind(it->ext) != std::string::npos))
+			best_match = *it;
+		else if ((it->ext == ".py") && ((ite_loc - 1)->rfind(it->ext) != std::string::npos))
+			best_match = *it;
+		else if (it->ext.empty())
+			best_match = *it;
+		it++;
+	}
+
 	return best_match;
 }
 

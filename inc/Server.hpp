@@ -28,7 +28,7 @@ public:
 
 public:
 	void _delete_uri_variable(std::string & loc);
-	void _convert_uri_dot(std::string & loc);
+	void _format_uri(std::string & loc);
 	void _remove_simple_dot(std::string & loc);
 	void _format_double_dot(std::string & loc);
 	void _decode_uri(std::string & loc);
