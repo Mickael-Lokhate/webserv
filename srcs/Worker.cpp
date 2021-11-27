@@ -84,6 +84,8 @@ void Worker::recv_client(int i)
 	char			buffer[_event_list[i].data];
 	Socket_client & client = _socket_clients[_event_list[i].ident];
 
+	if (client.state == ERROR)
+		return;
 	if (read(_event_list[i].ident, buffer, _event_list[i].data) == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
 #ifdef DEBUG
@@ -93,9 +95,16 @@ void Worker::recv_client(int i)
 	std::cout << "\n";
 #endif 
 	client.buffer_recv.append(buffer, _event_list[i].data);
-	if (client.build_request())
-		update_modif_list(_event_list[i].ident, EVFILT_USER,
+	if (client.state < RESPONSE)
+	{
+		client.build_request();
+		if (client.state == body)
+			update_modif_list(client.fd, EVFILT_TIMER,
+				EV_ADD, NOTE_SECONDS, TO_BODY);
+		if (client.state >= RESPONSE)
+			update_modif_list(client.fd, EVFILT_USER,
 				EV_ADD | EV_ONESHOT, NOTE_TRIGGER);
+	}
 }
 
 void Worker::send_client(int i)
@@ -105,10 +114,8 @@ void Worker::send_client(int i)
 	if (write(_event_list[i].ident, client.buffer_send.c_str(),
 				client.buffer_send.size()) == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
-	/*
-	update_modif_list(new_client, EVFILT_TIMER,
+	update_modif_list(client.fd, EVFILT_TIMER,
 		EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);
-	*/
 #ifdef DEBUG
 	std::cout << "[Worker] - send client -> ";
 	_socket_clients.find(_event_list[i].ident)->second.what();
@@ -158,7 +165,10 @@ void Worker::write_client(int i)
 
 void Worker::process_client(int i)
 {
-	int fd_client = _event_list[i].ident;
+	long fd_client = _event_list[i].ident;
+	
+	update_modif_list(fd_client, EVFILT_TIMER,
+			EV_ADD, NOTE_SECONDS, TO_RESPONSE);
 #ifdef DEBUG
 	std::cout << "[Worker] -   hundle client -> ";
 	_socket_clients[fd_client].what();

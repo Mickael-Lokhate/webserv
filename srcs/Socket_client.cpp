@@ -1,5 +1,12 @@
 #include <iostream>
+#include <string>
 #include "Socket_client.hpp"
+
+enum {
+	METHOD,
+	URI,
+	PROTOCOL,
+};
 
 Socket_client::Socket_client(void)
 {
@@ -35,8 +42,60 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	return *this;
 }
 
-bool process_header(void)
+bool Socket_client::check_method(std::string & in)
 {
+	static const std::string	methods[] = {
+		"GET", "POST", "PUT", "DELETE"};
+
+	for (int i = 0; i < 4; i++)
+		if (!in.compare(methods[i]))
+			return true;
+	return false;
+}
+
+
+bool Socket_client::process_header(void)
+{
+	size_t 						found;
+
+	/* START - request line */
+	found = buffer_recv.find("\r\n");
+	if (found == std::string::npos)
+		return false;
+	std::string		request_line = buffer_recv.substr(0, found);
+	std::string		method;
+	std::string		uri;
+	std::string		protocol;
+
+	std::cout << "Request line : " << request_line;
+	short i, state = METHOD;
+
+	for (i = 0; request_line[i]; i++)
+	{
+		if (request_line[i] == ' ')
+		{
+			switch (state)
+			{
+				case METHOD:
+					method.append(request_line, i);
+					if (!check_method(method))
+						return false;
+					break;
+				case URI: 
+					uri.append(request_line, method.size(),
+								i - method.size());
+					break;
+			}
+			state++;
+		}
+	}
+	protocol.append(request_line, method.size() + uri.size(),
+						i - (method.size() + uri.size()));
+	std::cout << "Request line : [" << request_line << "]\n";
+	std::cout << "Uri : [" << uri << "]\n";
+	std::cout << "Protocol : " << protocol << "]\n";
+	/* erase extracted string as late as possible */
+	/* END - request line */
 }
 
 bool process_body(void)
