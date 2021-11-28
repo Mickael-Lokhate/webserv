@@ -12,7 +12,6 @@ int main(void)
 
 	vsocket.push_back(Socket_server("8080","127.0.0.1"));
 	vsocket.push_back(Socket_server("8080","0.0.0.0"));
-	vsocket.push_back(Socket_server("8080","10.13.1.3"));
 	
 	try {
 		for(std::vector<Socket_server>::iterator it = vsocket.begin(); it != vsocket.end(); it++ ) {
