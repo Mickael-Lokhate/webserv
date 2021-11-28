@@ -13,7 +13,7 @@ class Socket_client {
 	public:
 
 	int				fd;
-	//Request			request;
+	//Request		request;
 	std::string		buffer_recv;
 	std::string		buffer_send;
 	std::string		addr;
@@ -30,4 +30,8 @@ class Socket_client {
 	bool build_request(void);
 	void build_response(void);
 	void what(void) const;
+
+	private: 
+
+	bool process_header(void);
 };
