@@ -6,6 +6,9 @@
 typedef enum http_state { 
 	HEADERS,
 	BODY,
+	RESPONSE,
+	ERROR,
+	SEND
 } e_http_state;
 
 class Socket_client {	

@@ -84,8 +84,6 @@ void Worker::recv_client(int i)
 	char			buffer[_event_list[i].data];
 	Socket_client & client = _socket_clients[_event_list[i].ident];
 
-	if (client.state == ERROR)
-		return;
 	if (read(_event_list[i].ident, buffer, _event_list[i].data) == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
 #ifdef DEBUG
@@ -95,16 +93,11 @@ void Worker::recv_client(int i)
 	std::cout << "\n";
 #endif 
 	client.buffer_recv.append(buffer, _event_list[i].data);
+	// -> process_client
 	if (client.state < RESPONSE)
-	{
-		client.build_request();
-		if (client.state == body)
-			update_modif_list(client.fd, EVFILT_TIMER,
-				EV_ADD, NOTE_SECONDS, TO_BODY);
-		if (client.state >= RESPONSE)
-			update_modif_list(client.fd, EVFILT_USER,
-				EV_ADD | EV_ONESHOT, NOTE_TRIGGER);
-	}
+		update_modif_list(client.fd, EVFILT_USER,
+			EV_ADD | EV_ONESHOT, NOTE_TRIGGER);
+
 }
 
 void Worker::send_client(int i)
@@ -126,6 +119,14 @@ void Worker::send_client(int i)
 	client.buffer_send.clear();
 	//client.buffer_recv.clear();
 	update_modif_list(_event_list[i].ident, EVFILT_WRITE, EV_DELETE);
+	client.state = HEADERS;
+	if (!client.buffer_recv.empty()) 
+	{
+		update_modif_list(client.fd, EVFILT_USER,
+			EV_ADD | EV_ONESHOT, NOTE_TRIGGER);
+		update_modif_list(client.fd, EVFILT_TIMER,
+			EV_ADD, NOTE_SECONDS, TO_HEADERS);
+	}
 }
 
 void Worker::del_client(int i)
@@ -142,20 +143,21 @@ void Worker::del_client(int i)
 
 void Worker::read_client(int i)
 {
-	int fd_client = (long)_event_list[i].udata;
 	int fd_file = _event_list[i].ident;
-
+	Socket_client & client = _socket_clients[(long)_event_list[i].udata];
 #ifdef DEBUG
 	std::cout << "[Worker] -   Read client -> ";
-	_socket_clients.find(fd_client)->second.what();
+	client.what();
 	std::cout << "\n";
 #endif 
 
 	char buffer[_event_list[i].data];
 
 	read(fd_file, buffer, _event_list[i].data);
-	_socket_clients[fd_client].buffer_send.append(buffer, _event_list[i].data);
-	update_modif_list(fd_client, EVFILT_WRITE, EV_ADD);
+	client.buffer_send.append(buffer, _event_list[i].data);
+	update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);
+	client.state = SEND;
+	
 }
 
 // upload 
@@ -165,20 +167,31 @@ void Worker::write_client(int i)
 
 void Worker::process_client(int i)
 {
-	long fd_client = _event_list[i].ident;
-	
-	update_modif_list(fd_client, EVFILT_TIMER,
-			EV_ADD, NOTE_SECONDS, TO_RESPONSE);
-#ifdef DEBUG
-	std::cout << "[Worker] -   hundle client -> ";
-	_socket_clients[fd_client].what();
-	std::cout << "\n";
-#endif 
-	// choose route etc..
-	int fd = open("./test.txt", O_RDONLY);
-	// i as Socket_client ref.
-	update_modif_list(fd, EVFILT_READ, EV_ADD,
-			0, 0,(void *)fd_client);
+
+	Socket_client & client = _socket_clients[_event_list[i].ident];
+	#ifdef DEBUG
+		std::cout << "[Worker] -   hundle client -> ";
+		_socket_clients[fd_client].what();
+		std::cout << "\n";
+	#endif 
+	if (client.state >= RESPONSE)
+		return ;
+	client.build_request();
+	if (client.state == BODY)
+		update_modif_list(client.fd, EVFILT_TIMER,
+			EV_ADD, NOTE_SECONDS, TO_BODY);
+	if (client.state >= RESPONSE)
+	{	
+		update_modif_list(client.fd, EVFILT_TIMER,
+				EV_ADD, NOTE_SECONDS, TO_RESPONSE);
+		if (client.state == ERROR)
+			update_modif_list(_event_list[i].ident, EVFILT_READ, EV_DELETE);
+		// choose route etc..
+		int fd = open("./test.txt", O_RDONLY);
+		// i as Socket_client ref.
+		update_modif_list(fd, EVFILT_READ, EV_ADD,
+				0, 0,(void *)((long)client.fd));
+	}
 }
 
 void Worker::event_loop(void)
