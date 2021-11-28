@@ -3,14 +3,6 @@
 #include <queue>
 #include "Request.hpp"
 
-typedef enum http_state { 
-	HEADERS,
-	BODY,
-	RESPONSE,
-	ERROR,
-	SEND
-} e_http_state;
-
 class Socket_client {	
 
 	public:
@@ -22,6 +14,7 @@ class Socket_client {
 	std::string		addr;
 	std::string		port;
 	e_http_state	state;
+	long			cursor;
 
 	Socket_client(void);
 	Socket_client(int fd, const std::string & addr, 
@@ -33,9 +26,4 @@ class Socket_client {
 	bool build_request(void);
 	void build_response(void);
 	void what(void) const;
-
-	private: 
-
-	bool process_headers(void);
-	bool process_request_line(void);
 };
