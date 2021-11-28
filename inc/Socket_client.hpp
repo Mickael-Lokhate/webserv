@@ -16,7 +16,7 @@ class Socket_client {
 	public:
 
 	int				fd;
-	//Request		request;
+	Request			request;
 	std::string		buffer_recv;
 	std::string		buffer_send;
 	std::string		addr;
@@ -36,5 +36,6 @@ class Socket_client {
 
 	private: 
 
-	bool process_header(void);
+	bool process_headers(void);
+	bool process_request_line(void);
 };

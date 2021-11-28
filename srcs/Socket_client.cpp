@@ -1,6 +1,12 @@
-#include <iostream>
+#include <vector>
 #include <string>
+#include <iostream>
+#include <map>
 #include "Socket_client.hpp"
+#define SPACE 1
+#define TRAIL 3
+#define COLON 1
+#define DELIM 2
 
 enum {
 	METHOD,
@@ -42,60 +48,100 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	return *this;
 }
 
-bool Socket_client::check_method(std::string & in)
+static const std::string & check_method
+(std::string & buffer_recv)
 {
 	static const std::string	methods[] = {
-		"GET", "POST", "PUT", "DELETE"};
+		"GET", "POST", "PUT", "DELETE", "err"};
+	int i;
 
-	for (int i = 0; i < 4; i++)
-		if (!in.compare(methods[i]))
-			return true;
-	return false;
+	for (i = 0; i < 4; i++)
+		if (!buffer_recv.compare(0, methods[i].size(),
+								methods[i]))
+			break;
+	return (methods[i]);
 }
 
-
-bool Socket_client::process_header(void)
+bool Socket_client::process_request_line(void)
 {
+	static const std::string	version = "HTTP/1.";
 	size_t 						found;
 
-	/* START - request line */
 	found = buffer_recv.find("\r\n");
 	if (found == std::string::npos)
 		return false;
-	std::string		request_line = buffer_recv.substr(0, found);
-	std::string		method;
-	std::string		uri;
-	std::string		protocol;
+	request.method = check_method(buffer_recv);
+	if (method == "err" || buffer_recv[method.size()] != ' ')
+		return false;
+	found = buffer_recv.find(" ", method.size() + SPACE);
+	if (found == std::string::npos)
+		return false;
+	request.uri = buffer_recv.substr(method.size() + SPACE,
+		   					found - (method.size() + SPACE));
+	found = buffer_recv.find(version, method.size() + uri.size() +
+							SPACE * 2);
+	if ((found == std::string::npos) ||
+		/* doest minor version is a digit ? */
+		!isdigit(buffer_recv[found + version.size()]) ||
+		/* [METHOD SPACE URI SPACE HTTP/x.x\r\n */
+		((method.size() + uri.size() + version.size() +
+		2 * SPACE + TRAIL) != buffer_recv.size()))
+		return false;
+#ifdef DEBUG
+	std::cout << "URI is [" << uri << "]\n";
+#endif
+	return true;
+}
 
-	std::cout << "Request line : " << request_line;
-	short i, state = METHOD;
+bool Socket_client::process_headers(void)
+{
+	std::string							key;
+	std::string							val;
+	size_t								cursor = 0;
+	size_t								found;
+	size_t								delim;
 
-	for (i = 0; request_line[i]; i++)
+	for (;;)
 	{
-		if (request_line[i] == ' ')
+		found = buffer_recv.find("\r\n", cursor);
+		if (found == std::string::npos || found == cursor)
+			break ;
+		delim = buffer_recv.find(":", cursor);
+		/* ignore invalid headers */
+		if (delim == std::string::npos || delim > found)
 		{
-			switch (state)
-			{
-				case METHOD:
-					method.append(request_line, i);
-					if (!check_method(method))
-						return false;
-					break;
-				case URI: 
-					uri.append(request_line, method.size(),
-								i - method.size());
-					break;
-			}
-			state++;
+			cursor = found + DELIM;
+			continue ;
 		}
+		key = buffer_recv.substr(cursor, delim - cursor);
+		val = buffer_recv.substr(delim + COLON, found - (delim + COLON));
+		if (key == "Host")
+		{
+			/* Host duplicate */
+			if (!request.host.empty())
+				return false;
+			request.host = val;
+		}
+		else if (key == "Content-length")
+		{
+			/* Content-length duplicate */
+			if (!request.content_length.empty())
+				return false;
+			request.content_length = val;
+		}
+		else
+			request.headers[key] = val;
+		cursor = found + DELIM;
 	}
-	protocol.append(request_line, method.size() + uri.size(),
-						i - (method.size() + uri.size()));
-	std::cout << "Request line : [" << request_line << "]\n";
-	std::cout << "Uri : [" << uri << "]\n";
-	std::cout << "Protocol : " << protocol << "]\n";
-	/* erase extracted string as late as possible */
-	/* END - request line */
+#ifdef DEBUG
+	for (std::map<std::string, std::string>::iterator it = request.headers.begin();
+		it != request.headers.end(); it++)
+		std::cout << it->first << ":" << it->second << std::endl;
+#endif
+	if (!host.empty())
+		return true;
+	else
+		return false;
 }
 
 bool process_body(void)
