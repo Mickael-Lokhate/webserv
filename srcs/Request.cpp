@@ -1,54 +1,78 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <map>
 #include "Request.hpp"
-#define SPACE 1
-#define TRAIL 3
-#define COLON 1
-#define DELIM 2
 
-Request::Request(std::string & buffer_recv) : buffer_recv(buffer_recv) {
+#define SPACE 1
+#define COLON 1
+
+Request::Request(std::string * buffer_recv) : 
+	delim("\r\n"),
+	buffer_recv(buffer_recv) 
+{
+	//std::cout << " Const @" << buffer_recv << "\n";
 }
 
-static const std::string & check_method
-(std::string & buffer_recv)
+Request::Request(Request & ref) : 
+	delim(ref.delim),
+	buffer_recv(ref.buffer_recv) 
 {
+//	std::cout << " cpy req @" << buffer_recv << "\n";
+}
+
+Request & Request::operator=(const Request & ref) {
+	delim = ref.delim;
+	buffer_recv = ref.buffer_recv;
+	return *this;
+}
+
+void Request::mytolower(std::string & str)
+{
+	for (size_t i = 0; i < str.size(); i++)
+		if (str[i] >= 'A' && str[i] <= 'Z')
+			str[i] = str[i] + 32;
+}
+
+const std::string & Request::check_method() {
 	static const std::string	methods[] = {
 		"GET", "POST", "PUT", "DELETE", "err"};
 	int i;
 
 	for (i = 0; i < 4; i++)
-		if (!buffer_recv.compare(0, methods[i].size(),
+		if (!buffer_recv->compare(0, methods[i].size(),
 								methods[i]))
 			break;
 	return (methods[i]);
 }
 
-e_http_state Request::process_request_line(std::string & buffer_recv, int *cursor)
+e_http_state Request::process_request_line()
 {
 	static const std::string	version = "HTTP/1.";
 	size_t 						found;
 
-	found = buffer_recv.find("\r\n");
+	//std::cout << "After @" << buffer_recv << "\n";
+	found = buffer_recv->find("\n");
 	if (found == std::string::npos)
 		return REQUEST_LINE;
-	method = check_method(buffer_recv);
-	if (method == "err" || buffer_recv[method.size()] != ' ')
+	if (found && (*buffer_recv)[found - 1] != '\r')
+		delim = "\n";
+	method = check_method();
+	if (method == "err" || (*buffer_recv)[method.size()] != ' ')
 		return ERROR;
-	found = buffer_recv.find(" ", method.size() + SPACE);
+	found = buffer_recv->find(" ", method.size() + SPACE);
 	if (found == std::string::npos)
 		return ERROR;
-	uri = buffer_recv.substr(method.size() + SPACE,
+	uri = buffer_recv->substr(method.size() + SPACE,
 		   					found - (method.size() + SPACE));
-	found = buffer_recv.find(version, method.size() + uri.size() +
+	found = buffer_recv->find(version, method.size() + uri.size() +
 							SPACE * 2);
 	if ((found == std::string::npos) ||
 		/* doest minor version is a digit ? */
-		!isdigit(buffer_recv[found + version.size()]) ||
-		/* [METHOD SPACE URI SPACE HTTP/x.x\r\n */
-		((method.size() + uri.size() + version.size() +
-		2 * SPACE + TRAIL) != buffer_recv.size()))
+		!isdigit((*buffer_recv)[found + version.size()]) ||
+		buffer_recv->compare(found + version.size() + SPACE, 
+		delim.size(), delim))
 		return ERROR;
 #ifdef DEBUG
 	std::cout << "URI is [" << uri << "]\n";
@@ -62,52 +86,71 @@ e_http_state Request::process_headers()
 	std::string							val;
 	size_t								cursor = 0;
 	size_t								found;
-	size_t								delim;
+	size_t								colon;
 
 	for (;;)
 	{
-		found = buffer_recv.find("\r\n", cursor);
+		found = buffer_recv->find(delim, cursor);
 		if (found == std::string::npos)
 			return HEADERS;
 		if (found == cursor)
 		{
 			if (!host.empty())
+			{
+				buffer_recv->erase(0, found + delim.size());
 				return BODY;
+			}
 			else
 				return ERROR;
 		}
-		delim = buffer_recv.find(":", cursor);
+		colon = buffer_recv->find(":", cursor);
 		/* ignore invalid headers */
-		if (delim == std::string::npos || delim > found)
+		if (colon == std::string::npos || colon > found)
 		{
-			cursor = found + DELIM;
+			cursor = found + delim.size();
 			continue ;
 		}
-		key = buffer_recv.substr(cursor, delim - cursor);
-		val = buffer_recv.substr(delim + COLON, found - (delim + COLON));
-		if (key == "Host")
+		key = buffer_recv->substr(cursor, colon - cursor);
+		mytolower(key);
+		val = buffer_recv->substr(colon + COLON,
+				found - (colon + COLON));
+		val = _ltrim(_rtrim(val));
+		if (key == "host")
 		{
 			/* Host duplicate */
 			if (!host.empty())
 				return ERROR;
 			host = val;
 		}
-		else if (key == "Content-length")
+		else if (key == "content-length")
 		{
 			/* Content-length duplicate */
 			if (content_length != -1)
 				return ERROR;
-			// try
-			content_length = std::stoi(val);
+			try { content_length = std::stoi(val); }
+			catch (std::exception & e)
+			{
+				return ERROR;
+			}
+		}
+		else if (key == "transfer-encoding")
+		{
+			/* Transfer-encoding duplicate */
+			if (headers.find(key) != headers.end())
+				return ERROR;
+			if (val == "chunked")
+				chunked = true;
+			else 
+				return ERROR;
 		}
 		else
 			headers[key] = val;
-		cursor = found + DELIM;
+		cursor = found + delim.size();
 	}
 }
 
 
-ssize_t _hexstr_to_int(std::string hexstr) {
+ssize_t Request::_hexstr_to_int(std::string const & hexstr) {
 	size_t s;   
 	if (!isxdigit(hexstr[0]))
 		return -1;
@@ -117,46 +160,45 @@ ssize_t _hexstr_to_int(std::string hexstr) {
 	return s;
 }
 
-bool get_simple_body() {
-	body.append(buffer_recv.substr(0, _content_length));
-	return body.size() == _content_length;
+bool Request::get_simple_body() {
+	body.append(buffer_recv->substr(0, content_length));
+	return (body.size() == (size_t)content_length);
 }
 
-bool get_ckunked_body() {
+bool Request::get_ckunked_body() {
 	size_t length = 0;
-	std::string const DELIM = "\n";
 	size_t pos_delim = 0;
 	size_t cursor = 0;
 	ssize_t size_chunck = -1;
 	while (size_chunck != 0) {
-		if ((pos_delim = buffer_recv.find(DELIM, cursor)) == std::string::npos) 
+		if ((pos_delim = buffer_recv->find(delim, cursor)) == std::string::npos) 
 			break;
 		// taille
-		size_chunck = _hexstr_to_int(buffer_recv.substr(cursor, pos_delim));
+		size_chunck = _hexstr_to_int(buffer_recv->substr(cursor, pos_delim));
 		if (size_chunck < 0)
 			throw std::logic_error("error chunked : hexa size");
-		if (pos_delim + DELIM.size() + size_chunck + DELIM.size() > buffer_recv.size())
+		if (pos_delim + delim.size() + size_chunck + delim.size() > buffer_recv->size())
 			break;
 		#ifdef DEBUG1
 		std::cout << "-> " << size_chunck << "\n";
 		#endif
-		cursor = pos_delim + DELIM.size();
-		body.append(buffer_recv.substr(cursor, size_chunck));
+		cursor = pos_delim + delim.size();
+		body.append(buffer_recv->substr(cursor, size_chunck));
 		#ifdef DEBUG1
-		std::cout << " {" <<  buffer_recv.substr(cursor, size_chunck) << "}\n";
+		std::cout << " {" <<  buffer_recv->substr(cursor, size_chunck) << "}\n";
 		#endif
 		cursor += size_chunck;
-		if (buffer_recv.compare(cursor, DELIM.size(), DELIM) != 0)
+		if (buffer_recv->compare(cursor, delim.size(), delim) != 0)
 			throw std::logic_error("error chunked : delimiter expected");
-		cursor += DELIM.size();
+		cursor += delim.size();
 		length += size_chunck;
 	}
-	buffer_recv.erase(0, cursor);
-	_content_length += length;
+	buffer_recv->erase(0, cursor);
+	content_length += length;
 	return (size_chunck == 0);
 }
 
-std::string  _statetostr(e_http_state st) {
+std::string  Request::_statetostr(e_http_state st) {
 	switch (st) {
 		case HEADERS:
 			return "HEADERS";
@@ -170,26 +212,23 @@ std::string  _statetostr(e_http_state st) {
 }
 
 e_http_state Request::process_body() {
-		if (!_chunked) {
-			if (get_simple_body())
-				state = RESPONSE;
-		} else {
-			try {
-				if (get_ckunked_body())
-					state = RESPONSE;
-			} catch(std::logic_error const & e) {
-				state = ERROR;
-				#ifdef DEBUG
-				std::cout << e.what() << "\n";
-				#endif
-			}
+	if (!chunked) {
+		if (get_simple_body())
+			return RESPONSE;
+	} else {
+		try {
+			if (get_ckunked_body())
+				return RESPONSE;
+		} catch(std::logic_error const & e) {
+			#ifdef DEBUG
+			std::cout << "body :  {" << body << "}\n";
+			std::cout << "content-length :  {" << content_length << "}\n";
+			std::cout << "rest : {" << buffer_recv << "}\n" ;
+			std::cout << e.what() << "\n";
+			#endif
+			return  ERROR;
 		}
-		#ifdef DEBUG
-		std::cout << "body :  {" << body << "}\n";
-		std::cout << "content-length :  {" << _content_length << "}\n";
-		std::cout << "rest : {" << buffer_recv << "}\n" ;
-		std::cout << "state: " << _statetostr(state) << "\n";
-		#endif
 	}
+	return BODY;
 }
 

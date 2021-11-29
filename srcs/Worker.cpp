@@ -64,13 +64,14 @@ void Worker::new_client(int i)
 						(struct sockaddr *)&from, &slen)) == -1)
 			throw std::runtime_error(std::string(strerror(errno)));
 		update_modif_list(new_client, EVFILT_TIMER,
-			EV_ADD, NOTE_SECONDS, TO_HEADERS);
+			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
 		update_modif_list(new_client, EVFILT_READ, EV_ADD);
 		char buffer[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &(from.sin_addr), buffer, INET_ADDRSTRLEN);
 		_socket_clients.insert(std::make_pair(new_client,
 						Socket_client(new_client, buffer,
 						std::to_string(htons(from.sin_port)))));
+	std::cout << "new @" << &(_socket_clients[new_client].buffer_recv) << "\n";
 #ifdef DEBUG
 		std::cout << "[Worker] -   new client -> " ;
 		_socket_clients.find(new_client)->second.what();
@@ -92,7 +93,9 @@ void Worker::recv_client(int i)
 	std::cout << ", " << _event_list[i].data << " bytes to read";
 	std::cout << "\n";
 #endif 
+	//std::cout << "append @" << &(client.buffer_recv) << "\n";
 	client.buffer_recv.append(buffer, _event_list[i].data);
+	//std::cout << "Before @" << &(client.buffer_recv) << "\n";
 	// -> process_client
 	if (client.state < RESPONSE)
 		update_modif_list(client.fd, EVFILT_USER,
@@ -119,13 +122,13 @@ void Worker::send_client(int i)
 	client.buffer_send.clear();
 	//client.buffer_recv.clear();
 	update_modif_list(_event_list[i].ident, EVFILT_WRITE, EV_DELETE);
-	client.state = HEADERS;
+	client.state = REQUEST_LINE;
 	if (!client.buffer_recv.empty()) 
 	{
 		update_modif_list(client.fd, EVFILT_USER,
 			EV_ADD | EV_ONESHOT, NOTE_TRIGGER);
 		update_modif_list(client.fd, EVFILT_TIMER,
-			EV_ADD, NOTE_SECONDS, TO_HEADERS);
+			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
 	}
 }
 
@@ -156,8 +159,6 @@ void Worker::read_client(int i)
 	read(fd_file, buffer, _event_list[i].data);
 	client.buffer_send.append(buffer, _event_list[i].data);
 	update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);
-	client.state = SEND;
-	
 }
 
 // upload 
@@ -169,9 +170,11 @@ void Worker::process_client(int i)
 {
 
 	Socket_client & client = _socket_clients[_event_list[i].ident];
+
+	//std::cout << " process @" << &(client.buffer_recv) << "\n";
 	#ifdef DEBUG
 		std::cout << "[Worker] -   hundle client -> ";
-		_socket_clients[fd_client].what();
+		_socket_clients[client.fd].what();
 		std::cout << "\n";
 	#endif 
 	if (client.state >= RESPONSE)
