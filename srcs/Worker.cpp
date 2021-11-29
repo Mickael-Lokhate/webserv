@@ -1,8 +1,5 @@
 #include "Worker.hpp"
-#include <iostream>
-#include <stdexcept>
-#include <unistd.h>
-#include <sys/socket.h>
+#include <limits.h>
 
 template<class T>
 void gwhat(T & obj) { obj.what(); }
@@ -13,8 +10,10 @@ Worker::Worker(const std::map<int, Socket_server> & socket_servers) :
 	std::map<int, Socket_server>::iterator last = _socket_servers.end();
 	std::map<int, Socket_server>::iterator it = _socket_servers.begin();
 
+	/* resize vectors for first kevent loop */
 	_event_list.resize(_socket_servers.size());
 	_modif_list.resize(_socket_servers.size());
+	/* register listeners */
 	for (int i = 0; it != last; it++)
 		EV_SET(&(_modif_list[i++]), it->second.fd,
 				EVFILT_READ, EV_ADD, 0, 0, NULL);
@@ -27,6 +26,7 @@ Worker::Worker(const Worker & ref)
 
 Worker::~Worker(void)
 {
+	;
 }
 
 Worker & Worker::operator=(const Worker & right) 
@@ -39,12 +39,13 @@ Worker & Worker::operator=(const Worker & right)
 	return *this;
 }
 
-void Worker::update_modif_list(int fd, int16_t filter,
+void Worker::update_modif_list(int ident, int16_t filter,
 		uint16_t flags, uint32_t fflags, intptr_t data, void *udata)
 {
-	_modif_list.resize(_modif_list.size() + 1);
-	EV_SET(_modif_list.end().base() - 1, fd, filter, flags,
-			fflags, data, udata);
+	struct kevent event;
+
+	EV_SET(&event, ident, filter, flags, fflags, data, udata);
+	_modif_list.push_back(event);
 }
 
 void Worker::new_client(int i)
@@ -63,15 +64,16 @@ void Worker::new_client(int i)
 		if ((new_client = accept(_event_list[i].ident,
 						(struct sockaddr *)&from, &slen)) == -1)
 			throw std::runtime_error(std::string(strerror(errno)));
+		/* Setup client's timeout for request line and headers */
 		update_modif_list(new_client, EVFILT_TIMER,
 			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
 		update_modif_list(new_client, EVFILT_READ, EV_ADD);
 		char buffer[INET_ADDRSTRLEN];
+		/* Store client's addr and port as string */
 		inet_ntop(AF_INET, &(from.sin_addr), buffer, INET_ADDRSTRLEN);
 		_socket_clients.insert(std::make_pair(new_client,
 						Socket_client(new_client, buffer,
 						std::to_string(htons(from.sin_port)))));
-	std::cout << "new @" << &(_socket_clients[new_client].buffer_recv) << "\n";
 #ifdef DEBUG
 		std::cout << "[Worker] -   new client -> " ;
 		_socket_clients.find(new_client)->second.what();
@@ -93,10 +95,8 @@ void Worker::recv_client(int i)
 	std::cout << ", " << _event_list[i].data << " bytes to read";
 	std::cout << "\n";
 #endif 
-	//std::cout << "append @" << &(client.buffer_recv) << "\n";
 	client.buffer_recv.append(buffer, _event_list[i].data);
-	//std::cout << "Before @" << &(client.buffer_recv) << "\n";
-	// -> process_client
+	/* After receiving data, we register a user event to wakeup process_client */
 	if (client.state < RESPONSE)
 		update_modif_list(client.fd, EVFILT_USER,
 			EV_ADD | EV_ONESHOT, NOTE_TRIGGER);
@@ -110,6 +110,7 @@ void Worker::send_client(int i)
 	if (write(_event_list[i].ident, client.buffer_send.c_str(),
 				client.buffer_send.size()) == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
+	/* Setup client's timeout for sending back data */
 	update_modif_list(client.fd, EVFILT_TIMER,
 		EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);
 #ifdef DEBUG
@@ -120,8 +121,8 @@ void Worker::send_client(int i)
 	std::cout << "\n";
 #endif 
 	client.buffer_send.clear();
-	//client.buffer_recv.clear();
 	update_modif_list(_event_list[i].ident, EVFILT_WRITE, EV_DELETE);
+	/* Reset client's state to process another waiting request */
 	client.state = REQUEST_LINE;
 	if (!client.buffer_recv.empty()) 
 	{
@@ -139,6 +140,9 @@ void Worker::del_client(int i)
 	_socket_clients.find(_event_list[i].ident)->second.what();
 	std::cout << "\n";
 #endif 
+	/* Delete timeout if it was not triggered */
+	if (_event_list[i].filter != EVFILT_TIMER)
+		update_modif_list(_event_list[i].ident, EVFILT_TIMER, EV_DELETE);
 	close(_event_list[i].ident);
 	_socket_clients.erase(_event_list[i].ident);
 	_closed_clients.insert(_event_list[i].ident);
@@ -171,7 +175,6 @@ void Worker::process_client(int i)
 
 	Socket_client & client = _socket_clients[_event_list[i].ident];
 
-	//std::cout << " process @" << &(client.buffer_recv) << "\n";
 	#ifdef DEBUG
 		std::cout << "[Worker] -   hundle client -> ";
 		_socket_clients[client.fd].what();
@@ -258,12 +261,8 @@ void Worker::event_loop(void)
 				std::cerr << "Worker::event_loop: " << e.what() << std::endl;
 			}
 		}
-		_event_list.resize(_socket_clients.size() + _socket_servers.size());
+		_event_list.resize(_socket_clients.size() +
+							+ _modif_list.size() + _socket_servers.size());
 	}
 
-}
-
-void Worker::what(void) const
-{
-	;
 }

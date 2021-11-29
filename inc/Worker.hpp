@@ -1,29 +1,23 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Worker.hpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: aclerac <marvin@42.fr>                     +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/11/22 15:45:49 by aclerac           #+#    #+#             */
-/*   Updated: 2021/11/26 11:10:12 by aclerac          ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #pragma once
+#include <iostream>
 #include <string>
 #include <set>
 #include <map>
 #include <vector>
+#include <stdexcept>
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #include "Socket_server.hpp"
 #include "Socket_client.hpp"
-#define TO_HEADERS 60
-#define TO_BODY 60
-#define TO_RESPONSE 60
-#define TO_SEND 60
+
+/* Timeouts */
+#define TO_HEADERS 3
+#define TO_BODY 3
+#define TO_RESPONSE 3
+#define TO_SEND 3
 
 class Worker {
 
@@ -35,12 +29,11 @@ class Worker {
 	Worker & operator=(const Worker & right);
 
 	void event_loop(void);
-	void what(void) const;
 
 	private:
 
 	void	register_socket_servers(void);
-	void	update_modif_list(int fd, int16_t filter,
+	void	update_modif_list(int ident, int16_t filter,
 				uint16_t flags = 0, uint32_t fflags = 0,
 				intptr_t data = 0, void *udata = 0);
 
@@ -61,56 +54,3 @@ class Worker {
 	std::set<int>					_closed_clients;
 
 };
-
-/*
-		+---------------------------------------------------------------------+
-		|                                                                     |
-		|                              Worker                                 |
-		|                                                                     |
-		|                                                                     |
-		|                           event_loop()                              |
-		|                                                                     |
-		|     +---------------------------+                                   |
-		|     |                                                               |
-		|     +--> new_client()+--------------------------------> accept()    |
-		|     |                                                               |
-		|     +--> recv_client()+-+                                           |
-		|     |                   |                                           |
-		|     +--> send_client()+------------------------+                    |
-		|     |                   |                      |                    |
-		|     +--> del_client()+--------------------------------> close()     |
-		|                         |                      |                    |
-		|                         |                      |                    |
-		|                         |                      |                    |
-		|                         v                      v                    |
-		|                  build_request()       build_response()             |
-		|                         +                      +                    |
-		|                         |                      |                    |
-		|    +--------------------+                      |                    |
-		|    |                                           |                    |
-		|    |                                           |                    |
-		|  +---------------------------------------------+                    |
-		|  | |          +---------------------------------------------------+ |
-		|  | +----> req |GET / HTTP/1.1\r\nHost: example.com\r\nGET / HTTP/1| |
-		|  |            +---------------------------------------------------+ |
-		|  |                                                                  |
-		|  |  * Aggrégation des données client                      ^         |
-		|  |                                                        |         |
-		|  |  * Vérification de la requête                          +         |
-		|  |                                                      cursor      |
-		|  |  * Création de l'object Request                                  |
-		|  |                                                                  |
-		|  |               ----------+ Gestion Client +----------             |
-		|  |                                                                  |
-		|  |  * Construction de la réponse(fichiers, CGI...)                  |
-		|  |                                                                  |
-		|  |  * Récupération des fichiers associés                            |
-		|  |                                                                  |
-		|  |  * Emission des données, fragmentée si nécessaire                |
-		|  |                                                                  |
-		|  |                                                                  |
-		|  |            +---------------------------------------------------+ |
-		|  +------> rep |HTTP 200 OK\r\nContent_type: blablabla...          | |
-		|               +---------------------------------------------------+ |
-		+---------------------------------------------------------------------++
-*/
