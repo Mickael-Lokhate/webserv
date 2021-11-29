@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <iostream>
+#include <sstream>
 
 #define STRDEBUG(MSG) std::string(__FUNCTION__) + " : " + MSG + " ("  + std::string(__FILE__) + ":" + std::to_string(__LINE__) + ")"
 
@@ -12,14 +13,15 @@ void what_(T elmt) {
 	elmt.what();	
 }
 
-static std::string _ltrim(const std::string &s)
-{
-    size_t start = s.find_first_not_of(" \r\t");
-    return (start == std::string::npos) ? "" : s.substr(start);
-}
+typedef enum http_state {
+	REQUEST_LINE,
+	HEADERS,
+	BODY,
+	RESPONSE,
+} e_http_state;
 
-static std::string _rtrim(const std::string &s)
-{
-    size_t end = s.find_last_not_of(" \r\t");
-    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
-}
+std::string _ltrim(const std::string &s);
+std::string _rtrim(const std::string &s);
+std::string _tolower(const std::string & str);
+ssize_t _hexstr_to_int(std::string const & hexstr);
+std::string  _statetostr(e_http_state st);

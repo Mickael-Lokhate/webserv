@@ -14,10 +14,10 @@
 #include "Socket_client.hpp"
 
 /* Timeouts */
-#define TO_HEADERS 3
-#define TO_BODY 3
-#define TO_RESPONSE 3
-#define TO_SEND 3
+#define TO_HEADERS 60
+#define TO_BODY 60
+#define TO_RESPONSE 60
+#define TO_SEND 60
 
 class Worker {
 

@@ -168,6 +168,7 @@ void Worker::read_client(int i)
 // upload 
 void Worker::write_client(int i)
 {
+	(void)i;
 }
 
 void Worker::process_client(int i)
@@ -190,7 +191,7 @@ void Worker::process_client(int i)
 	{	
 		update_modif_list(client.fd, EVFILT_TIMER,
 				EV_ADD, NOTE_SECONDS, TO_RESPONSE);
-		if (client.state == ERROR)
+		if (client.request.error)
 			update_modif_list(_event_list[i].ident, EVFILT_READ, EV_DELETE);
 		// choose route etc..
 		int fd = open("./test.txt", O_RDONLY);

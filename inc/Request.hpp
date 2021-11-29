@@ -1,15 +1,13 @@
 #pragma once
-#include <string>
+#include <vector>
+#include <iostream>
+#include <sstream>
 #include <map>
+#include <string>
 #include "utils.hpp"
 
-typedef enum http_state {
-	REQUEST_LINE,
-	HEADERS,
-	BODY,
-	RESPONSE,
-	ERROR,
-} e_http_state;
+#define SPACE 1
+#define COLON 1
 
 class Request {
 
@@ -24,21 +22,20 @@ class Request {
 	std::string 						body;
 	std::string							delim;
 	std::string							* buffer_recv;
+	int									error;
 
+	Request();
 	Request(std::string * buffer_recv);
-//	Request(const Request &);
-//	~Request(void);
+	Request(const Request & ref);
+	~Request(void);
 	Request & operator=(const Request & ref);
-	Request(Request & ref);
-	void what(void) const;
+
+	e_http_state process_request_line(void);
 	e_http_state process_headers(void);
 	e_http_state process_body(void);
-	e_http_state process_request_line(void);
-
-	void mytolower(std::string & str);
-	std::string  _statetostr(e_http_state st);
 	bool get_ckunked_body(void);
 	bool get_simple_body(void);
-	ssize_t _hexstr_to_int(std::string const & hexstr);
+
 	const std::string & check_method(void);
+	void what(void) const;
 };

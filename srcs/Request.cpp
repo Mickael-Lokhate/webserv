@@ -1,38 +1,36 @@
-#include <vector>
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <map>
 #include "Request.hpp"
 
-#define SPACE 1
-#define COLON 1
-
-Request::Request(std::string * buffer_recv) : 
-	delim("\r\n"),
-	buffer_recv(buffer_recv) 
-{
-	//std::cout << " Const @" << buffer_recv << "\n";
+Request::Request() {
 }
 
-Request::Request(Request & ref) : 
-	delim(ref.delim),
-	buffer_recv(ref.buffer_recv) 
+Request::~Request() {
+}
+
+Request::Request(std::string * buffer_recv) : 
+	content_length(-1),
+	chunked(false),
+	delim("\r\n"),
+	buffer_recv(buffer_recv), 
+	error(0)
 {
-//	std::cout << " cpy req @" << buffer_recv << "\n";
+}
+
+Request::Request(Request const & ref) {
+	*this = ref;
 }
 
 Request & Request::operator=(const Request & ref) {
+	method = ref.method;
+	uri = ref.uri;
+	host = ref.host;
+	content_length = ref.content_length;
+	chunked = ref.chunked;
+	headers = ref.headers;
+	body = ref.body;
 	delim = ref.delim;
 	buffer_recv = ref.buffer_recv;
+	error = ref.error;
 	return *this;
-}
-
-void Request::mytolower(std::string & str)
-{
-	for (size_t i = 0; i < str.size(); i++)
-		if (str[i] >= 'A' && str[i] <= 'Z')
-			str[i] = str[i] + 32;
 }
 
 const std::string & Request::check_method() {
@@ -52,7 +50,6 @@ e_http_state Request::process_request_line()
 	static const std::string	version = "HTTP/1.";
 	size_t 						found;
 
-	//std::cout << "After @" << buffer_recv << "\n";
 	found = buffer_recv->find("\n");
 	if (found == std::string::npos)
 		return REQUEST_LINE;
@@ -60,10 +57,15 @@ e_http_state Request::process_request_line()
 		delim = "\n";
 	method = check_method();
 	if (method == "err" || (*buffer_recv)[method.size()] != ' ')
-		return ERROR;
+	{
+		error = 400;
+		return RESPONSE;
+	}
 	found = buffer_recv->find(" ", method.size() + SPACE);
-	if (found == std::string::npos)
-		return ERROR;
+	if (found == std::string::npos) {
+		error = 400;
+		return RESPONSE;
+	}
 	uri = buffer_recv->substr(method.size() + SPACE,
 		   					found - (method.size() + SPACE));
 	found = buffer_recv->find(version, method.size() + uri.size() +
@@ -72,8 +74,10 @@ e_http_state Request::process_request_line()
 		/* doest minor version is a digit ? */
 		!isdigit((*buffer_recv)[found + version.size()]) ||
 		buffer_recv->compare(found + version.size() + SPACE, 
-		delim.size(), delim))
-		return ERROR;
+		delim.size(), delim)) {
+		error = 400;
+		return RESPONSE;
+	}
 #ifdef DEBUG
 	std::cout << "URI is [" << uri << "]\n";
 #endif
@@ -101,7 +105,10 @@ e_http_state Request::process_headers()
 				return BODY;
 			}
 			else
-				return ERROR;
+			{
+				error = 400;
+				return RESPONSE;
+			}
 		}
 		colon = buffer_recv->find(":", cursor);
 		/* ignore invalid headers */
@@ -111,37 +118,48 @@ e_http_state Request::process_headers()
 			continue ;
 		}
 		key = buffer_recv->substr(cursor, colon - cursor);
-		mytolower(key);
+		key = _tolower(key);
 		val = buffer_recv->substr(colon + COLON,
 				found - (colon + COLON));
-		val = _ltrim(_rtrim(val));
+		val = _tolower(_ltrim(_rtrim(val)));
 		if (key == "host")
 		{
 			/* Host duplicate */
-			if (!host.empty())
-				return ERROR;
+			if (!host.empty()) {
+				error = 400;
+				return RESPONSE;
+			}
 			host = val;
 		}
 		else if (key == "content-length")
 		{
 			/* Content-length duplicate */
-			if (content_length != -1)
-				return ERROR;
+			if (content_length != -1) {
+				error = 400;
+				return RESPONSE;
+			}
 			try { content_length = std::stoi(val); }
 			catch (std::exception & e)
 			{
-				return ERROR;
+				error = 400;
+				return RESPONSE;
 			}
 		}
 		else if (key == "transfer-encoding")
 		{
 			/* Transfer-encoding duplicate */
 			if (headers.find(key) != headers.end())
-				return ERROR;
+			{
+				error = 400;
+				return RESPONSE;
+			}
 			if (val == "chunked")
 				chunked = true;
 			else 
-				return ERROR;
+			{
+				error = 400;
+				return RESPONSE;
+			}
 		}
 		else
 			headers[key] = val;
@@ -149,16 +167,6 @@ e_http_state Request::process_headers()
 	}
 }
 
-
-ssize_t Request::_hexstr_to_int(std::string const & hexstr) {
-	size_t s;   
-	if (!isxdigit(hexstr[0]))
-		return -1;
-	std::stringstream ss;
-	ss << std::hex << hexstr;
-	ss >> s;
-	return s;
-}
 
 bool Request::get_simple_body() {
 	body.append(buffer_recv->substr(0, content_length));
@@ -198,18 +206,6 @@ bool Request::get_ckunked_body() {
 	return (size_chunck == 0);
 }
 
-std::string  Request::_statetostr(e_http_state st) {
-	switch (st) {
-		case HEADERS:
-			return "HEADERS";
-		case BODY:
-			return "BODY";
-		case RESPONSE:
-			return "RESPONSE";
-		default:
-			return "ERROR";
-	}
-}
 
 e_http_state Request::process_body() {
 	if (!chunked) {
@@ -226,7 +222,8 @@ e_http_state Request::process_body() {
 			std::cout << "rest : {" << buffer_recv << "}\n" ;
 			std::cout << e.what() << "\n";
 			#endif
-			return  ERROR;
+			error = 400;
+			return  RESPONSE;
 		}
 	}
 	return BODY;
