@@ -1,6 +1,6 @@
 #pragma once
+#include <iostream>
 #include <string>
-#include <queue>
 #include "Request.hpp"
 
 class Socket_client {	
@@ -18,7 +18,7 @@ class Socket_client {
 
 	Socket_client(void);
 	Socket_client(int fd, const std::string & addr, 
-					const std::string & port);
+						const std::string & port);
 	Socket_client(const Socket_client & ref);
 	~Socket_client(void);
 	Socket_client & operator=(const Socket_client & ref);

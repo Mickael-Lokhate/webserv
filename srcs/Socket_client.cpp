@@ -1,14 +1,14 @@
-#include <vector>
-#include <string>
-#include <iostream>
-#include <map>
 #include "Socket_client.hpp"
 
 Socket_client::Socket_client() : 
+	fd(-1),
 	buffer_recv(),
+	addr("none"),
+	port("nonw"),
+	state(REQUEST_LINE),
 	request(&buffer_recv)
 {
-	std::cout << " default @" << &buffer_recv << "\n";
+	;
 }
 
 Socket_client::Socket_client(int fd, const std::string & addr, 
@@ -20,18 +20,19 @@ Socket_client::Socket_client(int fd, const std::string & addr,
 	state(REQUEST_LINE),
 	request(&buffer_recv)
 {
+	;
 }
 
 Socket_client::Socket_client(const Socket_client & ref) :
 	buffer_recv(),
 	request(&buffer_recv) 
 {
-	std::cout << " cpy @" << &buffer_recv << "\n";
 	*this = ref;
 }
 
 Socket_client::~Socket_client(void)
 {
+	;
 }
 
 Socket_client & Socket_client::operator=(const Socket_client & ref)
@@ -47,7 +48,6 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 }
 
 
-/* parser */
 void Socket_client::build_request() 
 {
 	if (state == REQUEST_LINE)
@@ -58,10 +58,9 @@ void Socket_client::build_request()
 		state = request.process_body();
 }
 
-/* builder */
 void Socket_client::build_response(void)
 {
-	//return open("test.txt", O_RDONLY);
+	;
 }
 
 void Socket_client::what(void) const
