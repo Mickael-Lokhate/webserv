@@ -124,10 +124,13 @@ Route	Server::choose_route(const std::string & req)
 		it_loc = loc_tk.begin();
 		ite_loc = loc_tk.end();
 		tmpn_match = 0;
-		while (it_route != ite_route)
+		while (it_route != ite_route && it_loc != ite_loc)
 		{
 			if (*it_route++ != *it_loc++)
+			{
+				tmpn_match = 0;
 				break;
+			}		
 			tmpn_match++;
 		}
 		if (tmpn_match > n_match)
@@ -139,28 +142,33 @@ Route	Server::choose_route(const std::string & req)
 	ite = routes.end();
 	while (it != ite)
 	{
+		routes_tk = split(it->location, '/');
 		it_route = routes_tk.begin();
 		ite_route = routes_tk.end();
 		it_loc = loc_tk.begin();
 		ite_loc = loc_tk.end();
 		tmpn_match = 0;
-		while (*it_route++ != *it_loc++)
+		while (it_route != ite_route)
 		{
 			if (*it_route++ != *it_loc++)
+			{
+				tmpn_match = 0;
 				break;
+			}
 			tmpn_match++;
 		}
 		if (tmpn_match == n_match)
 			locs_match.push_back(*it);
+		it++;
 	}
 	it = locs_match.begin();
 	ite = locs_match.end();
 	while (it != ite)
 	{
-		if ((it->ext == ".php") && ((ite_loc - 1)->rfind(it->ext) != std::string::npos))
-			best_match = *it;
-		else if ((it->ext == ".py") && ((ite_loc - 1)->rfind(it->ext) != std::string::npos))
-			best_match = *it;
+		if (!it->ext.compare("php") && (ite_loc - 1)->size() - 4 > -1 && ((ite_loc - 1)->find(".php", (ite_loc - 1)->size() - 4) != std::string::npos))
+			return *it;
+		else if (!it->ext.compare("py") && (ite_loc - 1)->size() - 4 > -1 && ((ite_loc - 1)->find(".py", (ite_loc - 1)->size() - 3) != std::string::npos))
+			return *it;
 		else if (it->ext.empty())
 			best_match = *it;
 		it++;

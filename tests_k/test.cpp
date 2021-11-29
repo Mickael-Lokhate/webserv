@@ -27,11 +27,18 @@ int	main(void)
 
 	Route directory;
 	directory.location = "directory/";
+	Route directoryphp;
+	directoryphp.location = "directory/";
+	directoryphp.ext = "php";
+	Route directorypy;
+	directorypy.location = "directory/";
+	directorypy.ext = "py";
 	Route directorytest;
 	directorytest.location = "directory/test";
-	directorytest.ext = "php";
 	server.add_route(directory);
+	server.add_route(directoryphp);
+	server.add_route(directorypy);
 	server.add_route(directorytest);
 
-	server.choose_route("GET /directory/index.html HTTP/1.1").what();
+	server.choose_route("GET /directory/py HTTP/1.1").what();
 }
