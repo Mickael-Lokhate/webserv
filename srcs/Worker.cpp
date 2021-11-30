@@ -135,10 +135,10 @@ void Worker::send_client(int i)
 			client.state = REQUEST_LINE;
 			client.request = Request(&client.buffer_recv);
 			update_modif_list(_event_list[i].ident, EVFILT_WRITE, EV_DELETE);
+			/* Setup client's timeout for sending back data */
 			update_modif_list(client.fd, EVFILT_TIMER,
 					EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
 			std::cout << "{" << client.buffer_recv << "}\n";
-			/* Setup client's timeout for sending back data */
 			if (!client.buffer_recv.empty()) 
 			{
 				/* Reset client's state to process another waiting request */

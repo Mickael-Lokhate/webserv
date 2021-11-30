@@ -54,7 +54,8 @@ void Socket_client::build_request()
 		state = request.process_request_line();
 	if (state == HEADERS)
 		state = request.process_headers();
-	if (state == BODY) 
+	choose_root();
+	if (state == BODY)
 		state = request.process_body();
 }
 
