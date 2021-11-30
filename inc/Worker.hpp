@@ -10,14 +10,15 @@
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <algorithm>
 #include "Socket_server.hpp"
 #include "Socket_client.hpp"
 
 /* Timeouts */
-#define TO_HEADERS 60
-#define TO_BODY 60
-#define TO_RESPONSE 60
-#define TO_SEND 60
+#define TO_HEADERS 120
+#define TO_BODY 120
+#define TO_RESPONSE 120
+#define TO_SEND 120
 
 class Worker {
 

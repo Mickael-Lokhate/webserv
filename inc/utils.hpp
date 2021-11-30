@@ -9,8 +9,13 @@
 #define STRDEBUG0 std::string(__FUNCTION__) + " : " + strerror(errno) + " ("  + std::string(__FILE__) + ":" + std::to_string(__LINE__) + ")"
 
 template<class T>
-void what_(T elmt) {
-	elmt.what();	
+void _what_vector(T elmt) {
+	elmt.what();
+}
+
+template<class T1, class T2>
+void _what_map(std::pair<T1, T2> elmt) {
+	std::cout << "{" << elmt.first << ":" << elmt.second << "}\n";
 }
 
 typedef enum http_state {

@@ -6,6 +6,7 @@ Request::Request() {
 Request::~Request() {
 }
 
+
 Request::Request(std::string * buffer_recv) : 
 	content_length(-1),
 	chunked(false),
@@ -33,6 +34,12 @@ Request & Request::operator=(const Request & ref) {
 	return *this;
 }
 
+bool Request::is_valid_uri(std::string const & str) {
+	if (str[0] != '/')
+		return false;
+	return true;
+}
+
 const std::string & Request::check_method() {
 	static const std::string	methods[] = {
 		"GET", "POST", "PUT", "DELETE", "err"};
@@ -53,8 +60,13 @@ e_http_state Request::process_request_line()
 	found = buffer_recv->find("\n");
 	if (found == std::string::npos)
 		return REQUEST_LINE;
-	if (found && (*buffer_recv)[found - 1] != '\r')
+	if (!found || (*buffer_recv)[found - 1] != '\r')
 		delim = "\n";
+	// empty line before request line
+	if (buffer_recv->compare(0, delim.size(), delim) == 0) {
+		buffer_recv->erase(0, delim.size());
+		return REQUEST_LINE;
+	}
 	method = check_method();
 	if (method == "err" || (*buffer_recv)[method.size()] != ' ')
 	{
@@ -68,6 +80,10 @@ e_http_state Request::process_request_line()
 	}
 	uri = buffer_recv->substr(method.size() + SPACE,
 		   					found - (method.size() + SPACE));
+	if (!is_valid_uri(uri)) {
+		error = 400;
+		return RESPONSE;
+	}
 	found = buffer_recv->find(version, method.size() + uri.size() +
 							SPACE * 2);
 	if ((found == std::string::npos) ||
@@ -78,9 +94,6 @@ e_http_state Request::process_request_line()
 		error = 400;
 		return RESPONSE;
 	}
-#ifdef DEBUG
-	std::cout << "URI is [" << uri << "]\n";
-#endif
 	return HEADERS;
 }
 
@@ -102,6 +115,8 @@ e_http_state Request::process_headers()
 			if (!host.empty())
 			{
 				buffer_recv->erase(0, found + delim.size());
+				if (content_length == -1)
+					content_length = 0;
 				return BODY;
 			}
 			else
@@ -164,12 +179,16 @@ e_http_state Request::process_headers()
 		else
 			headers[key] = val;
 		cursor = found + delim.size();
+		buffer_recv->erase(0, found + delim.size());
 	}
 }
 
 
 bool Request::get_simple_body() {
-	body.append(buffer_recv->substr(0, content_length));
+	size_t size = content_length - body.size();
+	body.append(buffer_recv->substr(0, size));
+	size = std::min(buffer_recv->size(), size);
+	buffer_recv->erase(0, size);
 	return (body.size() == (size_t)content_length);
 }
 
@@ -208,6 +227,8 @@ bool Request::get_ckunked_body() {
 
 
 e_http_state Request::process_body() {
+	if (!(method == "POST" || method == "PUT"))
+		return RESPONSE;
 	if (!chunked) {
 		if (get_simple_body())
 			return RESPONSE;
@@ -229,3 +250,17 @@ e_http_state Request::process_body() {
 	return BODY;
 }
 
+void Request::what() const {
+	std::cout << "method : {" <<	method			<< "}\n";	
+	std::cout << "uri : {" <<	uri				<< "}\n";	
+	std::cout << "host : {" <<	host			<< "}\n";	
+	std::cout << "content_length : {" << 	content_length 	<< "}\n";
+	std::cout << "chunked : {" <<	chunked			<< "}\n";	
+	std::cout << "body : {" <<	body			<< "}\n";	
+	std::cout << "delim : {" <<	delim			<< "}\n";	
+	std::cout << "buffer_recv : {" <<	*buffer_recv		<< "}\n";	
+	std::cout << "error : {" <<	error			<< "}\n";	
+	std::cout << "headers : {" << "\n";	
+	std::for_each(headers.begin(), headers.end(), _what_map<std::string, std::string>);
+	std::cout << "}" << "\n";	
+}

@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
 echo "Content-type: text/html"
-if [ "$REQUEST_METHOD" == "GET" ]
-then
-	echo ""	
-else
-		echo ""
-		cat > out
-		cat out | tr [:lower:] [:upper:]
-fi
+echo ""	
+env > env

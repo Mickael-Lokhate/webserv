@@ -4,6 +4,7 @@
 #include <sstream>
 #include <map>
 #include <string>
+#include <algorithm>
 #include "utils.hpp"
 
 #define SPACE 1
@@ -16,13 +17,13 @@ class Request {
 	std::string							method;
 	std::string							uri;
 	std::string							host;
-	long								content_length;
+	ssize_t								content_length;
 	bool								chunked;
 	std::map<std::string, std::string>	headers;
 	std::string 						body;
 	std::string							delim;
 	std::string							* buffer_recv;
-	int									error;
+	short								error;
 
 	Request();
 	Request(std::string * buffer_recv);
@@ -33,6 +34,7 @@ class Request {
 	e_http_state process_request_line(void);
 	e_http_state process_headers(void);
 	e_http_state process_body(void);
+	bool is_valid_uri(std::string const & str);
 	bool get_ckunked_body(void);
 	bool get_simple_body(void);
 
