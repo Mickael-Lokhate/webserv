@@ -5,7 +5,7 @@
 #include <map>
 #include <vector>
 
-int main(void)
+int main(int argc, char *argv[], char *envp[])
 {
 	std::map<int, Socket_server> socket_servers;
 	std::vector<Socket_server> vsocket; 	
