@@ -118,23 +118,16 @@ void	Server::define_token_ext(std::vector<std::string> & tk, std::string & ext)
 		ext = "py";
 }
 
-Route	Server::choose_route(const std::string & req)
+void	Server::_depth_count(std::vector<std::string> & loc_tk, size_t & n_match)
 {
-	std::string loc(split(req, ' ').at(1));
-	_format_uri(loc);
 	std::vector<Route>::iterator it = routes.begin();
 	std::vector<Route>::iterator ite = routes.end();
-	std::vector<std::string> loc_tk(split(loc, '/'));
 	std::vector<std::string>::iterator it_loc;
 	std::vector<std::string>::iterator ite_loc;
 	std::vector<std::string> routes_tk;
 	std::vector<std::string>::iterator it_route;
 	std::vector<std::string>::iterator ite_route;
 	std::string loc_ext;
-
-	define_token_ext(loc_tk, loc_ext);
-	Route best_match = routes.at(0);
-	size_t n_match = 0;
 	size_t tmpn_match = 0;
 	while (it != ite)
 	{
@@ -157,9 +150,19 @@ Route	Server::choose_route(const std::string & req)
 			n_match = tmpn_match;
 		it++;
 	}
-	std::vector<Route> locs_match;
-	it = routes.begin();
-	ite = routes.end();
+}
+
+void	Server::_fill_route_candidate(std::vector<std::string> & loc_tk, std::vector<Route> & locs_match, size_t & n_match)
+{
+	std::vector<Route>::iterator it = routes.begin();
+	std::vector<Route>::iterator ite = routes.end();
+	std::vector<std::string>::iterator it_loc;
+	std::vector<std::string>::iterator ite_loc;
+	std::vector<std::string> routes_tk;
+	std::vector<std::string>::iterator it_route;
+	std::vector<std::string>::iterator ite_route;
+	std::string loc_ext;
+	size_t tmpn_match = 0;
 	while (it != ite)
 	{
 		routes_tk = split(it->location, '/');
@@ -181,6 +184,41 @@ Route	Server::choose_route(const std::string & req)
 			locs_match.push_back(*it);
 		it++;
 	}
+}
+
+Route	Server::_find_default_route(std::string const & ext)
+{
+	std::vector<Route>::iterator it = routes.begin();
+	std::vector<Route>::iterator ite = routes.end();
+	while (it != ite)
+	{
+		if (it->location.empty() && !it->ext.compare(ext))
+			return *it;
+		it++;
+	}
+	return routes[0];
+}
+
+Route	Server::choose_route(const std::string & req)
+{
+	std::string loc(split(req, ' ').at(1));
+	_format_uri(loc);
+	std::vector<Route>::iterator it = routes.begin();
+	std::vector<Route>::iterator ite = routes.end();
+	std::vector<std::string> loc_tk(split(loc, '/'));
+	std::vector<std::string> routes_tk;
+	std::vector<std::string>::iterator it_route;
+	std::vector<std::string>::iterator ite_route;
+	std::vector<Route> locs_match;
+	std::string loc_ext;
+	size_t n_match = 0;
+
+	define_token_ext(loc_tk, loc_ext);
+	Route best_match = routes.at(0);
+	_depth_count(loc_tk, n_match);
+	if (!n_match)
+		return _find_default_route(loc_ext);
+	_fill_route_candidate(loc_tk, locs_match, n_match);
 	it = locs_match.begin();
 	ite = locs_match.end();
 	while (it != ite)

@@ -111,7 +111,7 @@ void	TesterServer::choose_route(void)
 
 	expectedloc = "";
 	expectedext = "php";
-	route = server.choose_route("GET /directory/dontexist/test.html HTTP/1.1");
+	route = server.choose_route("GET /dontexist/test.php HTTP/1.1");
 	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
 	#ifdef DEBUG
 		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
