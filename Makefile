@@ -1,20 +1,22 @@
+CXX			= clang++
 NAME		= webserv
-SRC			= 
+SRC			= $(wildcard srcs/*.cpp)
 OBJ			= $(SRC:.cpp=.o)
-FLAGS		= -g -Wall -Wextra -Werror -std=c++98
+CXXFLAGS	= -I./inc -std=c++98 #-Wall -Wextra -Werror 
 
 all			: $(NAME)
 
 $(NAME)		: $(OBJ) 
-			g++ $(FLAGS) -o $@ $^
-
-%.o			: %.cpp
-			g++ $(FLAGS) -o $@ -c $^
+			$(CXX) $(FLAGS) -o $@ $^
 
 clean		:
-			rm -rf *.o
+			rm -rf $(SRC:.cpp=.o)
 
 fclean		: clean
 			rm -rf $(NAME) test
 
 re			: fclean all
+
+reclean			: fclean all clean
+
+.PHONY : all clean fclean re reclean
