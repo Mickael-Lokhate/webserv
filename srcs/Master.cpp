@@ -1,16 +1,20 @@
 #include "Master.hpp"
 
-Master::Master(std::string const & file_conf) : _file_conf(file_conf), _servers(), _sockets_servers() { 
+static const std::string _DEFAULT_CONF = "default.conf";
+
+Master::Master(std::string const & file_conf) : _file_conf(file_conf), _servers(), _socket_servers() { 
 	std::cout << "Master()" << "\n";
 }
 
 void Master::init() {
 	std::cout << "init()" << "\n";
-	// si _file_conf est vide ou que le fichier n'existe pas
-	// alors ouvrir le fichier par default
-	// afficher le choix de la config sur stdin
-	// envoyer le ifsteam aux loader
-	std::ifstream ifs;
+	
+	// choose file
+	if (_file_conf.empty())
+		_file_conf = _DEFAULT_CONF;
+	std::ifstream ifs (_file_conf);
+	if(!ifs.good())
+		throw std::runtime_error(STRDEBUG0);
 	Loader loader(ifs);
 	try {
 		loader.add_servers(_servers);
@@ -18,37 +22,39 @@ void Master::init() {
 		std::cerr << "Error : " << e.what() << "\n";
 	}
 
-	// recuperer les post:adress des servers
-	// creer les sockets & bind
-	
+	//create socket_srevers
+
+	std::set<std::pair<std::string, std::string> > listens;
+	for (std::vector<Server>::const_iterator it = _servers.begin(); it != _servers.end(); ++it)
+			listens.insert(std::make_pair(it->address, it->port));
+
+	for (std::set<std::pair<std::string, std::string> >::const_iterator it = listens.begin(); it != listens.end(); ++it) {
+		Socket_server socket_server(it->first, it->second);
+		socket_server.bind_();
+		_socket_servers.insert(std::make_pair(socket_server.fd, socket_server));
+	}
+
 }
 
 void Master::work() {
-	std::cout << "work()" << "\n";
-	//for_each(_sockets_servers.begin(), _sockets_servers.end(), _listen);
-	//Worker worker(_servers, _sockets_servers);
-	//Worker.event_loop();
+	for_each(_socket_servers.begin(), _socket_servers.end(), listen_);
+	Worker worker(_servers, _socket_servers);
+	worker.event_loop();
 }
 
 void Master::what() {
-	std::cout << "what()" << "\n";
 
 	// affiche file_conf
 	std::cout << "_DEFAULT_CONF: " << _DEFAULT_CONF << "\n";
 	std::cout << "_file_conf: " << _file_conf << "\n";
 
 	// affiche tt les serveur avec leurs routes
-	//for_each(_servers.begin(), _servers.end(), _what);
+	for_each(_servers.begin(), _servers.end(), what_);
 
 	// affiche tt les sockets_serveurs
-	//for_each(_servers.begin(), _servers.end(), _what);
+	for_each(_servers.begin(), _servers.end(), what_);
 }
 
-void Master::_listen(Socket_server socket_server) {
-	socket_server.listen();
-}
-
-template<class T>
-void Master::_what(T elmt) {
-	elmt.what();	
+void Master::listen_(std::pair<int, Socket_server> & ss) {
+	ss.second.listen_();
 }

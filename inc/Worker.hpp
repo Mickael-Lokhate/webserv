@@ -1,88 +1,57 @@
 #pragma once
+#include <iostream>
 #include <string>
+#include <set>
 #include <map>
 #include <vector>
+#include <stdexcept>
+#include <sys/types.h>
+#include <sys/event.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <algorithm>
 #include "Socket_server.hpp"
 #include "Socket_client.hpp"
-/*
-		+---------------------------------------------------------------------+
-		|                                                                     |
-		|                              Worker                                 |
-		|                                                                     |
-		|                                                                     |
-		|                           event_loop()                              |
-		|                                                                     |
-		|     +---------------------------+                                   |
-		|     |                                                               |
-		|     +--> new_client()+--------------------------------> accept()    |
-		|     |                                                               |
-		|     +--> recv_client()+-+                                           |
-		|     |                   |                                           |
-		|     +--> send_client()+------------------------+                    |
-		|     |                   |                      |                    |
-		|     +--> del_client()+--------------------------------> close()     |
-		|                         |                      |                    |
-		|                         |                      |                    |
-		|                         |                      |                    |
-		|                         v                      v                    |
-		|                  build_request()       build_response()             |
-		|                         +                      +                    |
-		|                         |                      |                    |
-		|    +--------------------+                      |                    |
-		|    |                                           |                    |
-		|    |                                           |                    |
-		|  +---------------------------------------------+                    |
-		|  | |          +---------------------------------------------------+ |
-		|  | +----> req |GET / HTTP/1.1\r\nHost: example.com\r\nGET / HTTP/1| |
-		|  |            +---------------------------------------------------+ |
-		|  |                                                                  |
-		|  |  * Aggrégation des données client                      ^         |
-		|  |                                                        |         |
-		|  |  * Vérification de la requête                          +         |
-		|  |                                                      cursor      |
-		|  |  * Création de l'object Request                                  |
-		|  |                                                                  |
-		|  |               ----------+ Gestion Client +----------             |
-		|  |                                                                  |
-		|  |  * Construction de la réponse(fichiers, CGI...)                  |
-		|  |                                                                  |
-		|  |  * Récupération des fichiers associés                            |
-		|  |                                                                  |
-		|  |  * Emission des données, fragmentée si nécessaire                |
-		|  |                                                                  |
-		|  |                                                                  |
-		|  |            +---------------------------------------------------+ |
-		|  +------> rep |HTTP 200 OK\r\nContent_type: blablabla...          | |
-		|               +---------------------------------------------------+ |
-		+---------------------------------------------------------------------++
-*/
 
-#include "Socket_client.hpp"
-#include "Socket_server.hpp"
-#include "Server.hpp"
+/* Timeouts */
+#define TO_HEADERS 120
+#define TO_BODY 120
+#define TO_RESPONSE 120
+#define TO_SEND 120
 
 class Worker {
 
 	public:
 
-	Worker(const std::vector<Server> & servers,
-			const std::map<int, Socket_server> & socket_servers);
+	Worker(const std::map<int, Socket_server> & socket_servers);
 	Worker(const Worker & ref);
 	~Worker(void);
 	Worker & operator=(const Worker & right);
 
 	void event_loop(void);
-	void what(void) const;
 
 	private:
 
-	void new_client(int socket);
-	void recv_client(const Socket_client & c);
-	void send_client(const Socket_client & c);
-	void del_client(const Socket_client & c);
+	void	register_socket_servers(void);
+	void	update_modif_list(int ident, int16_t filter,
+				uint16_t flags = 0, uint32_t fflags = 0,
+				intptr_t data = 0, void *udata = 0);
+
+	void	new_client(int i);
+	void	del_client(int i);
+
+	void	recv_client(int i);
+	void	send_client(int i);
+
+	void	process_client(int i);
+	void	read_client(int i);
+	void	write_client(int i);
 	
+	std::vector<struct kevent>		_event_list;
+	std::vector<struct kevent>		_modif_list;
 	std::map<int, Socket_client>	_socket_clients;
 	std::map<int, Socket_server>	_socket_servers;
-	const std::vector<Server>		_servers;
+	std::set<int>					_closed_clients;
 
 };

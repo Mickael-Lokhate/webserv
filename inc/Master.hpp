@@ -3,17 +3,20 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <set>
 #include "Socket_server.hpp"
 #include "Server.hpp"
 #include "Loader.hpp"
 #include "Worker.hpp"
+#include "utils.hpp"
+
 
 class Master {
 	private:
 		static const std::string _DEFAULT_CONF;
 		std::string _file_conf;
 		std::vector<Server> _servers;
-		std::vector<Socket_server> _sockets_servers;
+		std::map<int, Socket_server> _socket_servers;
 
 	public:
 		Master(std::string const & file_config);
@@ -21,7 +24,6 @@ class Master {
 		void work();
 		void what();
 	private:
-		void _listen(Socket_server ss);
+		static void listen_(std::pair<int, Socket_server>  & ss);
 		template<class T>
-		void _what(T elmt);
 };

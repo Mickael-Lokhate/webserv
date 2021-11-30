@@ -2,9 +2,17 @@
 .*.swp
 .*.swn
 .*.swm
+*.swo
+*.swp
+*.swn
+*.swm
 *.log
 /docker
 /test
 /resources
 README.md
 /*.dSYM
+*.o
+*.gch
+*.dSYM
+a.out
