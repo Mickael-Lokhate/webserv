@@ -28,6 +28,7 @@ public:
 	void what();
 
 public:
+	void define_token_ext(std::vector<std::string> & tk, std::string & ext);
 	void _delete_uri_variable(std::string & loc);
 	void _format_uri(std::string & loc);
 	void _remove_simple_dot(std::string & loc);

@@ -109,6 +109,15 @@ void	Server::_delete_duplicate_slash(std::string & loc)
 		loc.erase(n, 1);
 }
 
+void	Server::define_token_ext(std::vector<std::string> & tk, std::string & ext)
+{
+	std::vector<std::string>::iterator ite_loc = tk.end();
+	if (((ite_loc - 1)->size() - 4) >= 0 && ((ite_loc - 1)->find(".php", (ite_loc - 1)->size() - 4) != std::string::npos))
+		ext = "php";
+	else if ((((ite_loc - 1)->size() - 3) >= 0) && ((ite_loc - 1)->find(".py", (ite_loc - 1)->size() - 3) != std::string::npos))
+		ext = "py";
+}
+
 Route	Server::choose_route(const std::string & req)
 {
 	std::string loc(split(req, ' ').at(1));
@@ -121,6 +130,9 @@ Route	Server::choose_route(const std::string & req)
 	std::vector<std::string> routes_tk;
 	std::vector<std::string>::iterator it_route;
 	std::vector<std::string>::iterator ite_route;
+	std::string loc_ext;
+
+	define_token_ext(loc_tk, loc_ext);
 	Route best_match = routes.at(0);
 	size_t n_match = 0;
 	size_t tmpn_match = 0;
@@ -173,9 +185,7 @@ Route	Server::choose_route(const std::string & req)
 	ite = locs_match.end();
 	while (it != ite)
 	{
-		if (!it->ext.compare("php") && (ite_loc - 1)->size() - 4 > -1 && ((ite_loc - 1)->find(".php", (ite_loc - 1)->size() - 4) != std::string::npos))
-			return *it;
-		else if (!it->ext.compare("py") && (ite_loc - 1)->size() - 4 > -1 && ((ite_loc - 1)->find(".py", (ite_loc - 1)->size() - 3) != std::string::npos))
+		if (!it->ext.compare(loc_ext))
 			return *it;
 		else if (it->ext.empty())
 			best_match = *it;
