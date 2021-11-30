@@ -1,12 +1,17 @@
 //#include "Worker.hpp"
-#include "Worker.hpp"
-#include "Socket_server.hpp"
-#include <iostream>
-#include <map>
-#include <vector>
+//#include "Worker.hpp"
+//#include "Socket_server.hpp"
+//#include <iostream>
+//#include <map>
+//#include <vector>
+#include "Master.hpp"
 
-int main(int argc, char *argv[], char *envp[])
+int main(void)
 {
+	Master master("resources/exemple.conf");
+	master.init();
+	master.work();
+	/*
 	std::map<int, Socket_server> socket_servers;
 	std::vector<Socket_server> vsocket; 	
 
@@ -25,4 +30,5 @@ int main(int argc, char *argv[], char *envp[])
 	}
 	Worker mago(socket_servers);
 	mago.event_loop();
+	*/
 }

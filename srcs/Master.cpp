@@ -1,6 +1,6 @@
 #include "Master.hpp"
 
-static const std::string _DEFAULT_CONF = "default.conf";
+const std::string Master::_DEFAULT_CONF = "default.conf";
 
 Master::Master(std::string const & file_conf) : _file_conf(file_conf), _servers(), _socket_servers() { 
 	std::cout << "Master()" << "\n";
@@ -33,12 +33,17 @@ void Master::init() {
 		socket_server.bind_();
 		_socket_servers.insert(std::make_pair(socket_server.fd, socket_server));
 	}
+	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
+		it->second.what();
+
 
 }
 
 void Master::work() {
-	for_each(_socket_servers.begin(), _socket_servers.end(), listen_);
-	Worker worker(_servers, _socket_servers);
+	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
+		it->second.listen_();
+	Worker worker(_socket_servers);
+	//Worker worker(_servers, _socket_servers);
 	worker.event_loop();
 }
 
@@ -49,12 +54,8 @@ void Master::what() {
 	std::cout << "_file_conf: " << _file_conf << "\n";
 
 	// affiche tt les serveur avec leurs routes
-	for_each(_servers.begin(), _servers.end(), what_);
+	//for_each(_servers.begin(), _servers.end(), what);
 
 	// affiche tt les sockets_serveurs
-	for_each(_servers.begin(), _servers.end(), what_);
-}
-
-void Master::listen_(std::pair<int, Socket_server> & ss) {
-	ss.second.listen_();
+	//for_each(_servers.begin(), _servers.end(), what);
 }

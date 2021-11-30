@@ -1,6 +1,6 @@
 #include "Socket_server.hpp"
 
-Socket_server::Socket_server(std::string const & port, std::string const & address) : fd(-1), port(port), address(address) {
+Socket_server::Socket_server(std::string const & address, std::string const & port) : fd(-1), address(address), port(port) {
 }
 
 void Socket_server::listen_() {

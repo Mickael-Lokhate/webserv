@@ -4,11 +4,13 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 #include "Socket_server.hpp"
 #include "Server.hpp"
 #include "Loader.hpp"
 #include "Worker.hpp"
 #include "utils.hpp"
+
 
 
 class Master {
@@ -24,6 +26,5 @@ class Master {
 		void work();
 		void what();
 	private:
-		static void listen_(std::pair<int, Socket_server>  & ss);
-		template<class T>
+		static void listen_(std::pair<int, Socket_server> & ss);
 };
