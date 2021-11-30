@@ -20,6 +20,14 @@ Server::~Server()
 
 void	Server::add_route(const Route & route)
 {
+	std::vector<Route>::iterator it = routes.begin();
+	std::vector<Route>::iterator ite = routes.end();
+	while (it != ite)
+	{
+		if (!route.location.compare(it->location) && !route.ext.compare(it->ext))
+			throw std::runtime_error("Location duplica");
+		it++;
+	}
 	routes.push_back(route);
 }
 

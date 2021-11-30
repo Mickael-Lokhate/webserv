@@ -6,6 +6,7 @@
 #include <vector>
 #include <sstream>
 #include <iomanip>
+#include <exception>
 #include "utils.hpp"
 #include "Route.hpp"
 #include "Request.hpp"
