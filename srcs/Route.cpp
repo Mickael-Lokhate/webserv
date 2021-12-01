@@ -2,7 +2,7 @@
 
 Route::Route()
 {
-	root.first = "/www";
+	root.first = "www/";
 	root.second = false;
 	autoindex = "off";
 	max_body_size = "1 000 000";
@@ -10,8 +10,9 @@ Route::Route()
 	init_error_page();
 	ext = "";
 	index.push_back("index.html");
+	index.push_back("index.php");
 	cgi = "";
-	upload = "uploads";
+	upload = "";
 }
 
 Route::~Route()
