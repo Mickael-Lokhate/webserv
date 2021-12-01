@@ -48,22 +48,6 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 }
 
 
-void Socket_client::build_request() 
-{
-	if (state == REQUEST_LINE)
-		state = request.process_request_line();
-	if (state == HEADERS)
-		state = request.process_headers();
-	//choose_root();
-	if (state == BODY)
-		state = request.process_body();
-}
-
-void Socket_client::build_response(void)
-{
-	;
-}
-
 void Socket_client::what(void) const
 {
 	std::cout << "[" << fd << "] - " << addr << ":" << port;

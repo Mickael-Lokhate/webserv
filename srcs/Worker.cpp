@@ -180,7 +180,6 @@ void Worker::read_client(int i)
 
 	read(fd_file, buffer, _event_list[i].data);
 	client.buffer_send.append(buffer, _event_list[i].data);
-	update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);
 }
 
 // upload 
@@ -199,23 +198,39 @@ void Worker::process_client(int i)
 		_socket_clients[client.fd].what();
 		std::cout << "\n";
 	#endif 
-	if (client.state >= RESPONSE)
-		return ;
-	client.build_request();
-	if (client.state == BODY)
-		update_modif_list(client.fd, EVFILT_TIMER,
-			EV_ADD, NOTE_SECONDS, TO_BODY);
-	if (client.state >= RESPONSE)
-	{	
-		update_modif_list(client.fd, EVFILT_TIMER,
-				EV_ADD, NOTE_SECONDS, TO_RESPONSE);
-		if (client.request.error == 400 || client.request.error == 501)
-			update_modif_list(_event_list[i].ident, EVFILT_READ, EV_DELETE);
-		// choose route etc..
-		int fd = open("./test.txt", O_RDONLY);
-		// i as Socket_client ref.
-		update_modif_list(fd, EVFILT_READ, EV_ADD,
+	if (client.state < RESPONSE) 
+	{
+		if (state == REQUEST_LINE)
+			client.process_request_line();
+		if (state == HEADERS)
+			client.process_headers();
+		if (client.state == ROUTE)
+			client.get_root();
+		if (client.state == BODY) 
+		{
+			update_modif_list(client.fd, EVFILT_TIMER,
+				EV_ADD, NOTE_SECONDS, TO_BODY);
+			client.process_body();
+		}
+	}
+	if (client.state >= RESPONSE) 
+	{
+		if (client.state == RESPONSE)
+		{	
+			update_modif_list(client.fd, EVFILT_TIMER,
+					EV_ADD, NOTE_SECONDS, TO_RESPONSE);
+			if (client.response.status == 400 || client.response.status == 501)
+				update_modif_list(_event_list[i].ident, EVFILT_READ, EV_DELETE);
+		}
+		client.process_response();
+		if (client.state == NEED_READ)
+			update_modif_list(client.fd_read, EVFILT_READ, EV_ADD,
 				0, 0,(void *)((long)client.fd));
+		if (client.state == NEED_WRITE)
+			update_modif_list(client.fd_write, EVFILT_READ, EV_ADD,
+					0, 0,(void *)((long)client.fd));
+		if(client.state == READY)
+			update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);
 	}
 }
 

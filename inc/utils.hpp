@@ -61,8 +61,12 @@ void _what_map(std::pair<T1, T2> elmt) {
 typedef enum http_state {
 	REQUEST_LINE,
 	HEADERS,
+	ROUTE,
 	BODY,
 	RESPONSE,
+	NEED_READ,
+	NEED_WRITE,
+	READY,
 } e_http_state;
 
 std::string _ltrim(const std::string &s);
