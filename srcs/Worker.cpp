@@ -205,7 +205,7 @@ void Worker::process_client(int i)
 		if (state == HEADERS)
 			client.process_headers();
 		if (client.state == ROUTE)
-			client.get_root();
+		    client.process_response();
 		if (client.state == BODY) 
 		{
 			update_modif_list(client.fd, EVFILT_TIMER,
@@ -227,7 +227,7 @@ void Worker::process_client(int i)
 			update_modif_list(client.fd_read, EVFILT_READ, EV_ADD,
 				0, 0,(void *)((long)client.fd));
 		if (client.state == NEED_WRITE)
-			update_modif_list(client.fd_write, EVFILT_READ, EV_ADD,
+			update_modif_list(client.fd_write, EVFILT_WRITE, EV_ADD,
 					0, 0,(void *)((long)client.fd));
 		if(client.state == READY)
 			update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);

@@ -14,7 +14,7 @@ class Socket_server {
 		std::string address;
 		std::string port;
 		static const int BACKLOG = 128;
-		//std::map<std::string, Server *> servers;
+		std::map<std::string, Server *> servers;
 
 	public:
 		Socket_server(std::string const & address, std::string const & port);

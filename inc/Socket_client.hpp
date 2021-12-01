@@ -17,6 +17,7 @@ class Socket_client {
 	Request			request;
 	Response		response;
 	Route			route;
+    Socket_server   * sserver;
 
 	Socket_client(void);
 	Socket_client(int fd, const std::string & addr, 

@@ -51,3 +51,14 @@ void Socket_client::what(void) const
 {
 	std::cout << "[" << fd << "] - " << addr << ":" << port;
 }
+
+void process_response() {
+
+}
+
+void process_cgi() {
+
+}
+
+
+
