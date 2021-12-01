@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include "Request.hpp"
+#include "Response.hpp"
+#include "Socket_server.hpp"
 
 class Socket_client {	
 
@@ -13,20 +15,35 @@ class Socket_client {
 	std::string		addr;
 	std::string		port;
 	e_http_state	state;
-	long			cursor;
 	Request			request;
 	Response		response;
 	Route			route;
-    Socket_server   * sserver;
+    Socket_server   * socket_server;
+	int				fd_read;
+	int 			fd_write;
+	pid_t			pid_cgi;
 
 	Socket_client(void);
 	Socket_client(int fd, const std::string & addr, 
-						const std::string & port);
+						const std::string & port, 
+						Socket_server * socket_server);
 	Socket_client(const Socket_client & ref);
 	~Socket_client(void);
 	Socket_client & operator=(const Socket_client & ref);
 
-	void build_request(void);
-	void build_response(void);
+	void process_request_line(void);
+	void process_headers(void);
+	void process_body(void);
+
+	void prepare_response();
+	void process_response();
+	void process_cgi();
+
+	bool is_valid_uri(std::string const & str);
+	const std::string & check_method(void);
+
+	bool get_ckunked_body(void);
+	bool get_simple_body(void);
 	void what(void) const;
+
 };

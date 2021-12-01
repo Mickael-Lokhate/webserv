@@ -9,6 +9,8 @@
 
 #define STRDEBUG0 std::string(__FUNCTION__) + " : " + strerror(errno) + " ("  + std::string(__FILE__) + ":" + std::to_string(__LINE__) + ")"
 
+#define SPACE 1
+#define COLON 1
 
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);

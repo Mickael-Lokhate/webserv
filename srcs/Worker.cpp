@@ -71,9 +71,11 @@ void Worker::new_client(int i)
 		char buffer[INET_ADDRSTRLEN];
 		/* Store client's addr and port as string */
 		inet_ntop(AF_INET, &(from.sin_addr), buffer, INET_ADDRSTRLEN);
-		_socket_clients.insert(std::make_pair(new_client,
-						Socket_client(new_client, buffer,
-						std::to_string(htons(from.sin_port)))));
+		Socket_client client = Socket_client(new_client, buffer,
+						std::to_string(htons(from.sin_port)), 
+						&(_socket_servers.find(_event_list[i].ident)->second));
+		_socket_clients.insert(std::make_pair(new_client, client));
+
 #ifdef DEBUG
 		std::cout << "[Worker] -   new client -> " ;
 		_socket_clients.find(new_client)->second.what();
@@ -128,12 +130,14 @@ void Worker::send_client(int i)
 	}
 	else 
 	{
-		if (client.request.error == 400 || client.request.error == 501)
+		if (client.response.status == 400 || client.response.status == 501)
 			del_client(i);
 		else {
 			client.buffer_send.clear();
 			client.state = REQUEST_LINE;
-			client.request = Request(&client.buffer_recv);
+			client.request = Request();
+			client.response = Response();
+			client.route = Route();
 			update_modif_list(_event_list[i].ident, EVFILT_WRITE, EV_DELETE);
 			/* Setup client's timeout for sending back data */
 			update_modif_list(client.fd, EVFILT_TIMER,
@@ -200,12 +204,12 @@ void Worker::process_client(int i)
 	#endif 
 	if (client.state < RESPONSE) 
 	{
-		if (state == REQUEST_LINE)
+		if (client.state == REQUEST_LINE)
 			client.process_request_line();
-		if (state == HEADERS)
+		if (client.state == HEADERS)
 			client.process_headers();
 		if (client.state == ROUTE)
-		    client.process_response();
+		    client.prepare_response();
 		if (client.state == BODY) 
 		{
 			update_modif_list(client.fd, EVFILT_TIMER,
