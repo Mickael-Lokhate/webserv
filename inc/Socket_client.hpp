@@ -15,6 +15,8 @@ class Socket_client {
 	e_http_state	state;
 	long			cursor;
 	Request			request;
+	Response		response;
+	Route			route;
 
 	Socket_client(void);
 	Socket_client(int fd, const std::string & addr, 

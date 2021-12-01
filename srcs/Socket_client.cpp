@@ -47,7 +47,6 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	return *this;
 }
 
-
 void Socket_client::what(void) const
 {
 	std::cout << "[" << fd << "] - " << addr << ":" << port;
