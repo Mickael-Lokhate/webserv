@@ -42,30 +42,18 @@ void	Server::_remove_simple_dot(std::string & loc)
 void	Server::_format_double_dot(std::string & loc)
 {
 	size_t n = 0;
-	size_t ndot = 0;
-	size_t nsave = 0;
-	while ((n = loc.find("../")) && n != std::string::npos)
+	size_t n_save = 0;
+	while ((n = loc.find("../")) != std::string::npos)
 	{
-		nsave = n;
-		ndot = 2;
 		loc.erase(n, 3);
-		while ((n = loc.find("../", n)) && n != std::string::npos)
-		{
-			loc.erase(n, 3);
-			ndot++;
-		}
-		n = nsave;
-		n -= 1;
-		while (ndot--)
-		{
-			n = loc.rfind("/", n);
-			if (ndot == 0 || n < 0)
-			{
-				loc.erase(n, nsave - n - 1);
-				break;
-			}
-			n--;
-		}
+		n_save = --n;
+		if ((n = loc.rfind("/", n)) == std::string::npos)
+			throw std::runtime_error("Uri's ../ error");
+		if (!n--)
+			throw std::runtime_error("Uri's ../ error");
+		if ((n = loc.rfind("/", n)) == std::string::npos)
+			throw std::runtime_error("Uri's ../ error");
+		loc.erase(n + 1, n_save - n);
 	}
 }
 
@@ -105,7 +93,7 @@ void	Server::_decode_uri(std::string & loc)
 void	Server::_delete_duplicate_slash(std::string & loc)
 {
 	size_t n = 0;
-	while ((n = loc.find("//")) && n != std::string::npos)
+	while ((n = loc.find("//")) != std::string::npos)
 		loc.erase(n, 1);
 }
 
