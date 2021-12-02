@@ -3,6 +3,7 @@
 #include <string>
 #include "Request.hpp"
 #include "Response.hpp"
+#include "Cgi.hpp"
 #include "Socket_server.hpp"
 
 class Socket_client {	
@@ -15,13 +16,14 @@ class Socket_client {
 	std::string		addr;
 	std::string		port;
 	e_http_state	state;
+	Cgi				cgi;
 	Request			request;
 	Response		response;
 	Route			route;
     Socket_server   * socket_server;
 	int				fd_read;
 	int 			fd_write;
-	pid_t			pid_cgi;
+    Server			* server;
 
 	Socket_client(int fd = -1, const std::string & addr = "no_adr", 
 						const std::string & port = "no_port", 
@@ -36,7 +38,10 @@ class Socket_client {
 
 	void prepare_response();
 	void process_response();
-	void process_cgi();
+
+	void setup_cgi(void);
+	void prepare_pipes(void);
+	void process_cgi(void);
 
 	bool is_valid_uri(std::string const & str);
 	const std::string & check_method(void);

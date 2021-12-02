@@ -8,8 +8,7 @@ Socket_client::Socket_client(int fd, const std::string & addr,
 	state(REQUEST_LINE),
 	socket_server(socket_server),
 	fd_read(-1),
-	fd_write(-1),
-	pid_cgi(-1)
+	fd_write(-1)
 {
 	;
 }
@@ -38,7 +37,6 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	socket_server = ref.socket_server;
 	fd_read = ref.fd_read;
 	fd_write = ref.fd_write;
-	pid_cgi = ref.pid_cgi;
 	return *this;
 }
 
@@ -58,9 +56,9 @@ void Socket_client::big_what(void) const
 	request.what();
 	response.what();
 	route.what();
+	cgi.what();
 	std::cout << "fd_read : {" << fd_read << "}\n";
 	std::cout << "fd_write : {" << fd_write << "}\n";
-	std::cout << "pid_cgi : {" << pid_cgi << "}\n";
 	socket_server->big_what();
 }
 
@@ -68,6 +66,159 @@ bool Socket_client::is_valid_uri(std::string const & str) {
 	if (str[0] != '/')
 		return false;
 	return true;
+}
+
+static void _abort(void)
+{
+	std::cout << "[Cgi] - child: " << std::string(strerror(errno)) << std::endl;
+	_exit(EXIT_FAILURE);
+}
+
+static std::string _extract_query(const std::string & uri)
+{
+	size_t found;
+
+	if ((found = uri.find("?")) == std::string::npos)
+		return "";
+	else return uri.substr(found + 1, std::string::npos);
+}
+
+static std::string _delete_query(const std::string & uri)
+{
+	size_t found;
+
+
+	if ((found = uri.find("?")) == std::string::npos)
+		return uri;
+	else return uri.substr(0, found);
+}
+
+void Socket_client::setup_cgi()
+{
+	cgi.query_string = "QUERY_STRING=" + _extract_query(request.uri);
+	cgi.request_method = "REQUEST_METHOD=" + request.method;
+	cgi.content_type = "CONTENT_TYPE=" + request.headers["content-type"];
+	cgi.content_length = "CONTENT_LENGTH=" + request.headers["content-length"];
+	cgi.path_translated = "PATH_TRANSLATED=" + route.root.first + request.uri;
+	cgi.script_name = "SCRIPT_NAME=" + _delete_query(request.uri);
+	cgi.request_uri = "REQUEST_URI=" + request.uri;
+	cgi.document_uri = "DOCUMENT_URI=" + _delete_query(request.uri);
+	cgi.remote_addr = "REMOTE_ADDR=" + addr;
+	cgi.remote_port = "REMOTE_PORT=" + port;
+	cgi.server_port = "SERVER_PORT=" + server->port;
+	cgi.server_name = "SERVER_NAME=" + server->address;
+	cgi.script_filename = "SCRIPT_FILENAME=" + route.cgi;
+	cgi.path_info = "PATH_INFO=" + _delete_query(request.uri);
+
+	char *path = getenv("PATH");
+	char *pwd = getenv("PWD");
+
+	if (path)
+		cgi.envp.push_back(path);
+	if (pwd)
+		cgi.envp.push_back(pwd);
+	/* static environment */
+	cgi.envp.push_back(cgi.server_protocol.begin().base());
+	cgi.envp.push_back(cgi.request_scheme.begin().base());
+	cgi.envp.push_back(cgi.gateway_interface.begin().base());
+	cgi.envp.push_back(cgi.server_software.begin().base());
+	/* ------------------ */
+	cgi.envp.push_back(cgi.query_string.begin().base());
+	cgi.envp.push_back(cgi.request_method.begin().base());
+	cgi.envp.push_back(cgi.content_type.begin().base());
+	cgi.envp.push_back(cgi.content_length.begin().base());
+	cgi.envp.push_back(cgi.script_name.begin().base());
+	cgi.envp.push_back(cgi.request_uri.begin().base());
+	cgi.envp.push_back(cgi.document_uri.begin().base());
+	cgi.envp.push_back(cgi.remote_addr.begin().base());
+	cgi.envp.push_back(cgi.remote_port.begin().base());
+	cgi.envp.push_back(cgi.server_name.begin().base());
+	cgi.envp.push_back(cgi.script_filename.begin().base());
+	cgi.envp.push_back(cgi.path_info.begin().base());
+	cgi.envp.push_back(NULL);
+}
+
+/*
+ 
+   		  Le Worker écrit dans INPUT[1] et CGI lit dans INPUT[0]
+   		 Le Worker lit dans OUTPUT[0] et CGI écrit dans OUTPUT[1]
+ 
+ 
+ 			                  ----------------
+
+
+ 
+               input[1] <=> write_fs                    input[0]
+
+                +-+-------------------------------------+-+
+      +------>  | |            |---------->             | |  +------+
+      |         +-+-------------------------------------+-+         |
+      +                                                             v
+                         +----------------------+
++----------+             |  Cgi {               |             +----------+
+|          |             |                      |             |          |
+|  Worker  |             |      int input[2];   |             |    Cgi   |
+|          |             |      int output[2];  |             |          |
++----------+             |  };                  |             +----------+
+                         +----------------------+
+      ^                                                             +
+      |         +-+-------------------------------------+-+         |
+      +------+  | |            <----------|             | |  <------+
+                +-+-------------------------------------+-+
+
+            output[0] <=> read_fs                    output[1]
+
+*/
+
+void Socket_client::prepare_pipes(void)
+{
+
+#ifdef DEBUG
+	std::cout << "[Cgi] - start CGI initialization" << std::endl;
+#endif
+	if (pipe(cgi.input) == -1)
+		throw std::runtime_error(std::string(strerror(errno)));
+	if (pipe(cgi.output) == -1)
+	{
+		std::runtime_error error =
+				std::runtime_error(std::string(strerror(errno)));
+		close(cgi.input[0]);
+		close(cgi.input[1]);
+		throw error;
+	}
+	fd_read = cgi.output[0];
+	fd_write = cgi.input[1];
+}
+
+void Socket_client::process_cgi(void)
+{
+	pid_t pid;
+
+#ifdef DEBUG
+	std::cout << "[Cgi] - start CGI execution" << std::endl;
+#endif
+	prepare_pipes();
+	if ((pid = fork()) == -1)
+	{
+		cgi.close_pipe_worker_side();
+		throw std::runtime_error(std::string(strerror(errno)));
+	}
+	else if (pid == 0)
+	{
+		/* we SHOULD close socket_clients, socket_server and
+		 * ALL currently opens fd..
+		 */
+		cgi.close_pipe_cgi_side();
+		if (dup2(cgi.input[0], STDIN_FILENO)   == -1 ||
+			dup2(cgi.output[1], STDOUT_FILENO) == -1)
+			_abort();
+		if (execve(route.cgi.c_str(), (char *[]){route.cgi.begin().base(),
+			_delete_query(request.uri).begin().base(), NULL}, cgi.envp.begin().base()) == -1)
+		/* Catch error with waitpid */
+			_abort();
+	}
+	cgi.close_pipe_worker_side();
+	cgi.pid = pid;
 }
 
 const std::string & Socket_client::check_method() {
@@ -311,12 +462,15 @@ void Socket_client::prepare_response() {
 	while (it != socket_server->servers.end()) {
 		if (find((*it)->server_name.begin(), (*it)->server_name.end(), request.host) != (*it)->server_name.end()) {
 			route = (*it)->choose_route(request.uri);
+			server = *it;
 			break;
 		}
 		it++;
 	}
-	if (it == socket_server->servers.end())
+	if (it == socket_server->servers.end()) {
 		route = (socket_server->servers[0])->choose_route("");
+		server = socket_server->servers[0];
+	}
 	route.what();
 	//	detecte error case relative to request 
 	//	and update response.status
