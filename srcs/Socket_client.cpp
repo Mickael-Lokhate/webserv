@@ -298,16 +298,29 @@ void Socket_client::process_body() {
 	state = BODY;
 }
 
+
 void Socket_client::prepare_response() {
-	//	get route
-	//	detecte error case relative to request
+	//	choose server + route
+	if (request.host.empty()) {
+		state = RESPONSE;
+		return ;
+	}
+	for(std::vector<Server *>::iterator it = socket_server->servers.begin(); it != socket_server->servers.end(); it++) {
+		if (find((*it)->server_name.begin(), (*it)->server_name.end(), request.host) != (*it)->server_name.end()) {
+			route = (*it)->choose_route(request.uri);
+			break;
+		}
+	}
+	route.what();
+	//	detecte error case relative to request 
+	//	and update response.status
 }
 
 void Socket_client::process_response() {
 	// return
 	// upload
 	// cgi
-	// get file
+	// get folder or file ou error_file(when response.status == 400 501 405 ...)
 }
 
 void process_cgi() {
