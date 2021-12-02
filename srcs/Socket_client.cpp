@@ -351,11 +351,14 @@ void Socket_client::_process_error_page()
 
 void Socket_client::_process_return()
 {
-	response.status = route.return_.first;
+	response.status = to_number<short>(route.return_.first);
 	response.location = route.return_.second;
-	// state = NEED_READ;
-	// Open response.status corresponding file
-	// update response.body
+	if ((fd_read = open(to_string(route.error_page.at(to_string(response.status))).c_str(), O_RDONLY | O_NONBLOCK)) == -1)
+	{
+		//TMP
+		response.body = to_string(response.status);
+	}
+	state = NEED_READ;
 	// state = READY;
 }
 
@@ -370,6 +373,7 @@ void Socket_client::_process_upload()
 
 void Socket_client::_process_normal()
 {
+
 	// Check method 
 	// if get 
 		// state = NEED_READ;

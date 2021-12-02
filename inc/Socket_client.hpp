@@ -1,6 +1,8 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <fcntl.h>
+#include "utils.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
 #include "Socket_server.hpp"
