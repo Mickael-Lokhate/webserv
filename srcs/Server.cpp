@@ -189,7 +189,7 @@ Route	Server::_find_default_route(std::string const & ext)
 
 Route	Server::choose_route(const std::string & req)
 {
-	std::string loc(split(req, ' ').at(1));
+	std::string loc(req);
 	_format_uri(loc);
 	std::vector<Route>::iterator it = routes.begin();
 	std::vector<Route>::iterator ite = routes.end();
