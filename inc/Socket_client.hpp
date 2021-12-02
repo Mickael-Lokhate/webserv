@@ -1,6 +1,9 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include "utils.hpp"
 #include "Request.hpp"
@@ -55,4 +58,7 @@ class Socket_client {
 	void _process_return(void);
 	void _process_upload(void);
 	void _process_normal(void);
+	void _set_error(short code);
+	size_t  _get_file_size(int fd);
+	bool	_is_dir(const char* path);
 };
