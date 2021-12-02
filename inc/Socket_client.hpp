@@ -24,6 +24,7 @@ class Socket_client {
 	int				fd_read;
 	int 			fd_write;
 	pid_t			pid_cgi;
+	Server			* server;
 
 	Socket_client(int fd = -1, const std::string & addr = "no_adr", 
 						const std::string & port = "no_port", 

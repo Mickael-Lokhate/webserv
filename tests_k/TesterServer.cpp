@@ -86,7 +86,7 @@ void	TesterServer::choose_route(void)
 	std::cout << "------- choose route" << std::endl;
 	expectedloc = "/directory";
 	expectedext = "php";
-	route = server.choose_route("GET /directory/test.php HTTP/1.1");
+	route = server.choose_route("/directory/test.php");
 	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
 	#ifdef DEBUG
 		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
@@ -94,7 +94,7 @@ void	TesterServer::choose_route(void)
 	#endif
 
 	expectedext = "py";
-	route = server.choose_route("GET /directory/test.py HTTP/1.1");
+	route = server.choose_route("/directory/test.py");
 	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
 	#ifdef DEBUG
 		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
@@ -102,7 +102,7 @@ void	TesterServer::choose_route(void)
 	#endif
 
 	expectedext = "";
-	route = server.choose_route("GET /directory/test.html HTTP/1.1");
+	route = server.choose_route("/directory/test.html");
 	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
 	#ifdef DEBUG
 		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
@@ -111,7 +111,7 @@ void	TesterServer::choose_route(void)
 
 	expectedloc = "";
 	expectedext = "php";
-	route = server.choose_route("GET /dontexist/test.php HTTP/1.1");
+	route = server.choose_route("/dontexist/test.php");
 	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
 	#ifdef DEBUG
 		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
@@ -120,7 +120,7 @@ void	TesterServer::choose_route(void)
 
 	expectedloc = "";
 	expectedext = "php";
-	route = server.choose_route("GET /test.php HTTP/1.1");
+	route = server.choose_route("/test.php");
 	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
 	#ifdef DEBUG
 		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
