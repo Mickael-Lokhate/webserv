@@ -1,5 +1,8 @@
 #include "Socket_client.hpp"
 
+extern std::map<short, std::string> status_msgs;
+extern std::map<short, std::string> default_pages;
+
 Socket_client::Socket_client(int fd, const std::string & addr, 
 								const std::string & port, Socket_server * socket_server) :
 	fd(fd),
@@ -131,6 +134,7 @@ void Socket_client::process_request_line()
 		state = ROUTE;
 		return;
 	}
+	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
 }
 
@@ -138,12 +142,13 @@ void Socket_client::process_headers()
 {
 	std::string							key;
 	std::string							val;
-	size_t								cursor = 0;
+	size_t								cursor;
 	size_t								found;
 	size_t								colon;
 
 	for (;;)
 	{
+		cursor = 0;
 		found = buffer_recv.find(request.delim, cursor);
 		if (found == std::string::npos) {
 			state = HEADERS;
@@ -300,13 +305,22 @@ void Socket_client::process_body() {
 			return ;
 		}
 	}
+	if (!response.status && request.content_length > std::stol(route.max_body_size)) {
+		response.status = 403;
+		state = RESPONSE;
+		return;
+	}	
 	state = BODY;
 }
 
 
 void Socket_client::prepare_response() {
 	//	choose server + route
+	//	detecte error case relative to request 
+	//	and update response.status
+
 	//big_what();
+	/*
 	std::vector<Server *>::iterator it = socket_server->servers.begin();
 	while (it != socket_server->servers.end()) {
 		if (find((*it)->server_name.begin(), (*it)->server_name.end(), request.host) != (*it)->server_name.end()) {
@@ -320,14 +334,25 @@ void Socket_client::prepare_response() {
 		route = (socket_server->servers[0])->choose_route("");
 		server = socket_server->servers[0]; 
 	}
+	*/
+	server = socket_server->servers[0]; 
+	route = (socket_server->servers[0])->routes[0];
 	route.what();
-	//	detecte error case relative to request 
-	//	and update response.status
-	//	test ligne
-	//	test  2 ligne
+	
+	if (response.status == 400 || response.status == 501) {
+		state = RESPONSE;
+		return ;
+	}
+
+	// limit_except
+	if (route.limit_except.size() && find(route.limit_except.begin(), route.limit_except.end(), request.method) == route.limit_except.end()) {
+		response.status = 405;
+	}
+	state = BODY;
 }
 
 void Socket_client::process_response() {
+	exit(0);
 	// Check if response status is != 0
 	if (response.status != 0)
 		_process_error_page();
@@ -356,8 +381,8 @@ void Socket_client::_process_error_page()
 
 void Socket_client::_process_return()
 {
-	response.status = route.return_.first;
-	response.location = route.return_.second;
+//	response.status = route.return_.first;
+//	response.location = route.return_.second;
 	// state = NEED_READ;
 	// Open response.status corresponding file
 	// update response.body
@@ -394,5 +419,6 @@ void Socket_client::_process_normal()
 		// same as get but no body
 }
 
-void process_cgi() {
+void Socket_client::process_cgi() {
 }
+

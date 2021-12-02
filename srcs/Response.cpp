@@ -6,7 +6,7 @@ Response::~Response() {
 Response::Response() : 
 	status(0),
 	content_length(-1),
-	chunked(false),
+	chunked(false)
 {
 }
 
