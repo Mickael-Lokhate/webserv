@@ -17,6 +17,7 @@ class Response {
 	ssize_t								content_length;
 	std::string							content_type;
 	bool								chunked;
+	std::string							location;
 
 	Response();
 	Response(const Response & ref);

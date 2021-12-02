@@ -323,10 +323,70 @@ void Socket_client::prepare_response() {
 }
 
 void Socket_client::process_response() {
+	// Check if response status is != 0
+	if (response.status != 0)
+		_process_error_page();
 	// return
+	else if (!route.return_.first.empty())
+		_process_return();
 	// upload
+	else if (!route.upload.empty())
+		_process_upload();
+	else if (!route.cgi.empty())
+		process_cgi();
+	else
+		_process_normal();
 	// cgi
 	// get folder or file ou error_file(when response.status == 400 501 405 ...)
+}
+
+void Socket_client::_process_error_page()
+{
+	// state = NEED_READ;
+	// check if response.status corresponding to an error_page
+	// Open response.status corresponding file
+	// update response.body
+	// if bad file in an error page => 404 
+}
+
+void Socket_client::_process_return()
+{
+	response.status = route.return_.first;
+	response.location = route.return_.second;
+	// state = NEED_READ;
+	// Open response.status corresponding file
+	// update response.body
+	// state = READY;
+}
+
+void Socket_client::_process_upload()
+{
+	// Get Request body
+	// state = NEED_WRITE;
+	// Write uri file in the route.upload path
+	// response.status = ?
+	// state = READY;
+}
+
+void Socket_client::_process_normal()
+{
+	// Check method 
+	// if get 
+		// state = NEED_READ;
+		// Try open requested file
+		// update response.status depending on file opening
+		// update response.body
+		// state = READY;
+	// if delete
+		// try delete requested file
+		// update response.status
+		// state = READY
+	// if post 
+		// ?
+	// if put
+		// ?
+	// if head
+		// same as get but no body
 }
 
 void process_cgi() {

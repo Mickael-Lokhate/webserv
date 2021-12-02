@@ -46,4 +46,10 @@ class Socket_client {
 	void what(void) const;
 	void big_what(void) const;
 
+	private:
+	
+	void _process_error_page(void);
+	void _process_return(void);
+	void _process_upload(void);
+	void _process_normal(void);
 };
