@@ -54,14 +54,13 @@ void Master::work() {
 	worker.event_loop();
 }
 
-void Master::what() {
+void Master::what() const {
 
 	// affiche file_conf
 	std::cout << "_DEFAULT_CONF: " << _DEFAULT_CONF << "\n";
 	std::cout << "_file_conf: " << _file_conf << "\n";
 
 	for_each(_servers.begin(), _servers.end(), _what_vector<Server>);
-	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
+	for (std::map<int, Socket_server>::const_iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
 		it->second.what();
-
 }

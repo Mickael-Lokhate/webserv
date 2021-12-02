@@ -1,27 +1,15 @@
 #include "Socket_client.hpp"
 
-Socket_client::Socket_client() : 
-	fd(-1),
-	buffer_recv(),
-	buffer_send(),
-	addr("none"),
-	port("nonw"),
-	state(REQUEST_LINE),
-	socket_server(NULL),
-	fd_read(-1),
-	fd_write(-1),
-	pid_cgi(-1)
-{
-	;
-}
-
 Socket_client::Socket_client(int fd, const std::string & addr, 
 								const std::string & port, Socket_server * socket_server) :
 	fd(fd),
 	addr(addr),
 	port(port),
 	state(REQUEST_LINE),
-	socket_server(socket_server)
+	socket_server(socket_server),
+	fd_read(-1),
+	fd_write(-1),
+	pid_cgi(-1)
 {
 	;
 }
@@ -39,12 +27,12 @@ Socket_client::~Socket_client(void)
 Socket_client & Socket_client::operator=(const Socket_client & ref)
 {
 	fd = ref.fd;
-	request = Request();
 	buffer_recv = ref.buffer_recv;
 	buffer_send = ref.buffer_send;
 	addr = ref.addr;
 	port = ref.port;
 	state = ref.state;
+	request = Request();
 	response = ref.response;
 	route = ref.route;
 	socket_server = ref.socket_server;
@@ -57,6 +45,23 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 void Socket_client::what(void) const
 {
 	std::cout << "[" << fd << "] - " << addr << ":" << port;
+}
+
+void Socket_client::big_what(void) const
+{
+	std::cout << "fd : {" << fd << "}\n";
+	std::cout << "addr : {" << addr << "}\n";
+   	std::cout << "port : {" << port << "}\n";
+	std::cout << "buffer_recv : {" << buffer_recv << "}\n";
+	std::cout << "buffer_send : {" << buffer_send << "}\n";
+	std::cout << "state : {" << state << "}\n";
+	request.what();
+	response.what();
+	route.what();
+	std::cout << "fd_read : {" << fd_read << "}\n";
+	std::cout << "fd_write : {" << fd_write << "}\n";
+	std::cout << "pid_cgi : {" << pid_cgi << "}\n";
+	socket_server->big_what();
 }
 
 bool Socket_client::is_valid_uri(std::string const & str) {
@@ -301,16 +306,17 @@ void Socket_client::process_body() {
 
 void Socket_client::prepare_response() {
 	//	choose server + route
-	if (request.host.empty()) {
-		state = RESPONSE;
-		return ;
-	}
-	for(std::vector<Server *>::iterator it = socket_server->servers.begin(); it != socket_server->servers.end(); it++) {
+	//big_what();
+	std::vector<Server *>::iterator it = socket_server->servers.begin();
+	while (it != socket_server->servers.end()) {
 		if (find((*it)->server_name.begin(), (*it)->server_name.end(), request.host) != (*it)->server_name.end()) {
 			route = (*it)->choose_route(request.uri);
 			break;
 		}
+		it++;
 	}
+	if (it == socket_server->servers.end())
+		route = (socket_server->servers[0])->choose_route("");
 	route.what();
 	//	detecte error case relative to request 
 	//	and update response.status

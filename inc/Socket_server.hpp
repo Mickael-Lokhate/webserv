@@ -21,5 +21,6 @@ class Socket_server {
 		Socket_server(std::string const & address, std::string const & port);
 		void listen_();
 		void bind_();
-		void what();
+		void what() const;
+		void big_what() const;
 };

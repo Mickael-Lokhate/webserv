@@ -23,10 +23,9 @@ class Socket_client {
 	int 			fd_write;
 	pid_t			pid_cgi;
 
-	Socket_client(void);
-	Socket_client(int fd, const std::string & addr, 
-						const std::string & port, 
-						Socket_server * socket_server);
+	Socket_client(int fd = -1, const std::string & addr = "no_adr", 
+						const std::string & port = "no_port", 
+						Socket_server * socket_server = NULL);
 	Socket_client(const Socket_client & ref);
 	~Socket_client(void);
 	Socket_client & operator=(const Socket_client & ref);
@@ -45,5 +44,6 @@ class Socket_client {
 	bool get_ckunked_body(void);
 	bool get_simple_body(void);
 	void what(void) const;
+	void big_what(void) const;
 
 };
