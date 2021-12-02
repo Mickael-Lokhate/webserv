@@ -11,8 +11,6 @@
 #include "Worker.hpp"
 #include "utils.hpp"
 
-
-
 class Master {
 	private:
 		static const std::string _DEFAULT_CONF;

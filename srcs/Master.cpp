@@ -8,7 +8,10 @@ Master::Master(std::string const & file_conf) : _file_conf(file_conf), _servers(
 
 void Master::init() {
 	std::cout << "init()" << "\n";
-	
+
+	add_status_msgs();
+	add_default_pages();
+
 	// choose file
 	if (_file_conf.empty())
 		_file_conf = _DEFAULT_CONF;

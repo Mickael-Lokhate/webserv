@@ -183,7 +183,8 @@ void Worker::read_client(int i)
 	char buffer[_event_list[i].data];
 
 	read(fd_file, buffer, _event_list[i].data);
-	client.buffer_send.append(buffer, _event_list[i].data);
+	client.response.body.append(buffer, _event_list[i].data);
+
 }
 
 // upload 
