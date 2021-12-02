@@ -9,6 +9,8 @@
 
 #define STRDEBUG0 std::string(__FUNCTION__) + " : " + strerror(errno) + " ("  + std::string(__FILE__) + ":" + std::to_string(__LINE__) + ")"
 
+#define SPACE 1
+#define COLON 1
 
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);
@@ -61,8 +63,12 @@ void _what_map(std::pair<T1, T2> elmt) {
 typedef enum http_state {
 	REQUEST_LINE,
 	HEADERS,
+	ROUTE,
 	BODY,
 	RESPONSE,
+	NEED_READ,
+	NEED_WRITE,
+	READY,
 } e_http_state;
 
 std::string _ltrim(const std::string &s);

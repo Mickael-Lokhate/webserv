@@ -38,9 +38,15 @@ void Socket_server::bind_() {
 	}
 }
 
-void Socket_server::what() {
+void Socket_server::what() const {
 	std::cout << "+ Socket_server : " << "\n";
 	std::cout << "- fd: " << this->fd << "\n";
 	std::cout << "- address: " << this->address << "\n";
 	std::cout << "- port: " << this->port << "\n";
+}
+
+void Socket_server::big_what() const {
+	what();
+	for (std::vector<Server *>::const_iterator it = servers.begin(); it !=servers.end(); it++)
+		(*it)->what();
 }

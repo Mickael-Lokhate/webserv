@@ -14,7 +14,7 @@ void Master::init() {
 		_file_conf = _DEFAULT_CONF;
 	std::ifstream ifs (_file_conf);
 	if(!ifs.good())
-		throw std::runtime_error(STRDEBUG0);
+		throw std::runtime_error(strerror(errno));
 	Loader loader(ifs);
 	try {
 		loader.add_servers(_servers);
@@ -30,32 +30,37 @@ void Master::init() {
 
 	for (std::set<std::pair<std::string, std::string> >::const_iterator it = listens.begin(); it != listens.end(); ++it) {
 		Socket_server socket_server(it->first, it->second);
+		_add_servers(socket_server);
 		socket_server.bind_();
 		_socket_servers.insert(std::make_pair(socket_server.fd, socket_server));
 	}
-	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
-		it->second.what();
-
-
+	
 }
+
+void Master::_add_servers(Socket_server & socket_server) {
+	std::vector<Server>::iterator iter = _servers.begin();
+	while (iter != _servers.end()) {
+		if (iter->address == socket_server.address && iter->port == iter->port)
+			socket_server.servers.push_back(&(*iter));
+    	iter++;
+	}
+}
+
 
 void Master::work() {
 	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
 		it->second.listen_();
 	Worker worker(_socket_servers);
-	//Worker worker(_servers, _socket_servers);
 	worker.event_loop();
 }
 
-void Master::what() {
+void Master::what() const {
 
 	// affiche file_conf
 	std::cout << "_DEFAULT_CONF: " << _DEFAULT_CONF << "\n";
 	std::cout << "_file_conf: " << _file_conf << "\n";
 
-	// affiche tt les serveur avec leurs routes
-	//for_each(_servers.begin(), _servers.end(), what);
-
-	// affiche tt les sockets_serveurs
-	//for_each(_servers.begin(), _servers.end(), what);
+	for_each(_servers.begin(), _servers.end(), _what_vector<Server>);
+	for (std::map<int, Socket_server>::const_iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
+		it->second.what();
 }

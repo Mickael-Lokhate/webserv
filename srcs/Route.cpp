@@ -5,13 +5,14 @@ Route::Route()
 	root.first = "/www";
 	root.second = false;
 	autoindex = "off";
-	max_body_size = "1 000 000";
+	max_body_size = "1000000";
 	location = "";
 	init_error_page();
 	ext = "";
 	index.push_back("index.html");
+	index.push_back("index.php");
 	cgi = "";
-	upload = "uploads";
+	upload = "";
 }
 
 Route::~Route()
@@ -30,7 +31,7 @@ void Route::init_error_page(void)
 	error_page.insert(std::pair<std::string, std::string>("504", "error/50x.html"));
 }
 
-void Route::what()
+void Route::what() const
 {
 	std::cout << "------ Route : " << location << " ------" << std::endl;
 	if (!root.second)
@@ -40,8 +41,8 @@ void Route::what()
 	std::cout << "autoindex : " << autoindex << std::endl;
 	std::cout << "max_body_size : " << max_body_size << std::endl;
 
-	std::vector<std::string>::iterator itexc = limit_except.begin();
-	std::vector<std::string>::iterator itexce = limit_except.end();
+	std::vector<std::string>::const_iterator itexc = limit_except.begin();
+	std::vector<std::string>::const_iterator itexce = limit_except.end();
 	std::cout << "limit_except : " << std::endl;
 	while (itexc != itexce)
 	{
@@ -49,8 +50,8 @@ void Route::what()
 		itexc++;
 	}
 
-	std::map<std::string, std::string>::iterator iterr = error_page.begin();
-	std::map<std::string, std::string>::iterator iterre = error_page.end();
+	std::map<std::string, std::string>::const_iterator iterr = error_page.begin();
+	std::map<std::string, std::string>::const_iterator iterre = error_page.end();
 	std::cout << "error_page : " << std::endl;
 	while (iterr != iterre)
 	{
@@ -63,8 +64,8 @@ void Route::what()
 
 	std::cout << "ext : " << ext << std::endl;
 
-	std::vector<std::string>::iterator it = index.begin();
-	std::vector<std::string>::iterator ite = index.end();
+	std::vector<std::string>::const_iterator it = index.begin();
+	std::vector<std::string>::const_iterator ite = index.end();
 	std::cout << "index :" << std::endl;
 	while (it != ite)
 	{

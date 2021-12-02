@@ -11,8 +11,9 @@
 /test
 /resources
 README.md
-/*.dSYM
+*.dSYM
 *.o
 *.gch
 *.dSYM
 a.out
+./webserv

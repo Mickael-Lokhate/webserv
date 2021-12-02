@@ -23,7 +23,7 @@ public:
 public:
 	Route();
 	~Route();
-	void what();
+	void what() const;
 
 private:
 	void init_error_page(void);

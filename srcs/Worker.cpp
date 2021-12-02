@@ -71,9 +71,11 @@ void Worker::new_client(int i)
 		char buffer[INET_ADDRSTRLEN];
 		/* Store client's addr and port as string */
 		inet_ntop(AF_INET, &(from.sin_addr), buffer, INET_ADDRSTRLEN);
-		_socket_clients.insert(std::make_pair(new_client,
-						Socket_client(new_client, buffer,
-						std::to_string(htons(from.sin_port)))));
+		Socket_client client = Socket_client(new_client, buffer,
+						std::to_string(htons(from.sin_port)), 
+						&(_socket_servers.find(_event_list[i].ident)->second));
+		_socket_clients.insert(std::make_pair(new_client, client));
+
 #ifdef DEBUG
 		std::cout << "[Worker] -   new client -> " ;
 		_socket_clients.find(new_client)->second.what();
@@ -128,12 +130,14 @@ void Worker::send_client(int i)
 	}
 	else 
 	{
-		if (client.request.error == 400 || client.request.error == 501)
+		if (client.response.status == 400 || client.response.status == 501)
 			del_client(i);
 		else {
 			client.buffer_send.clear();
 			client.state = REQUEST_LINE;
-			client.request = Request(&client.buffer_recv);
+			client.request = Request();
+			client.response = Response();
+			client.route = Route();
 			update_modif_list(_event_list[i].ident, EVFILT_WRITE, EV_DELETE);
 			/* Setup client's timeout for sending back data */
 			update_modif_list(client.fd, EVFILT_TIMER,
@@ -180,7 +184,6 @@ void Worker::read_client(int i)
 
 	read(fd_file, buffer, _event_list[i].data);
 	client.buffer_send.append(buffer, _event_list[i].data);
-	update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);
 }
 
 // upload 
@@ -199,23 +202,39 @@ void Worker::process_client(int i)
 		_socket_clients[client.fd].what();
 		std::cout << "\n";
 	#endif 
-	if (client.state >= RESPONSE)
-		return ;
-	client.build_request();
-	if (client.state == BODY)
-		update_modif_list(client.fd, EVFILT_TIMER,
-			EV_ADD, NOTE_SECONDS, TO_BODY);
-	if (client.state >= RESPONSE)
-	{	
-		update_modif_list(client.fd, EVFILT_TIMER,
-				EV_ADD, NOTE_SECONDS, TO_RESPONSE);
-		if (client.request.error == 400 || client.request.error == 501)
-			update_modif_list(_event_list[i].ident, EVFILT_READ, EV_DELETE);
-		// choose route etc..
-		int fd = open("./test.txt", O_RDONLY);
-		// i as Socket_client ref.
-		update_modif_list(fd, EVFILT_READ, EV_ADD,
+	if (client.state < RESPONSE) 
+	{
+		if (client.state == REQUEST_LINE)
+			client.process_request_line();
+		if (client.state == HEADERS)
+			client.process_headers();
+		if (client.state == ROUTE)
+		    client.prepare_response();
+		if (client.state == BODY) 
+		{
+			update_modif_list(client.fd, EVFILT_TIMER,
+				EV_ADD, NOTE_SECONDS, TO_BODY);
+			client.process_body();
+		}
+	}
+	if (client.state >= RESPONSE) 
+	{
+		if (client.state == RESPONSE)
+		{	
+			update_modif_list(client.fd, EVFILT_TIMER,
+					EV_ADD, NOTE_SECONDS, TO_RESPONSE);
+			if (client.response.status == 400 || client.response.status == 501)
+				update_modif_list(_event_list[i].ident, EVFILT_READ, EV_DELETE);
+		}
+		client.process_response();
+		if (client.state == NEED_READ)
+			update_modif_list(client.fd_read, EVFILT_READ, EV_ADD,
 				0, 0,(void *)((long)client.fd));
+		if (client.state == NEED_WRITE)
+			update_modif_list(client.fd_write, EVFILT_WRITE, EV_ADD,
+					0, 0,(void *)((long)client.fd));
+		if(client.state == READY)
+			update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);
 	}
 }
 
