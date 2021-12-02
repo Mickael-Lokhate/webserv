@@ -311,15 +311,20 @@ void Socket_client::prepare_response() {
 	while (it != socket_server->servers.end()) {
 		if (find((*it)->server_name.begin(), (*it)->server_name.end(), request.host) != (*it)->server_name.end()) {
 			route = (*it)->choose_route(request.uri);
+			server = *it;
 			break;
 		}
 		it++;
 	}
-	if (it == socket_server->servers.end())
+	if (it == socket_server->servers.end()) {
 		route = (socket_server->servers[0])->choose_route("");
+		server = socket_server->servers[0]; 
+	}
 	route.what();
 	//	detecte error case relative to request 
 	//	and update response.status
+	//	test ligne
+	//	test  2 ligne
 }
 
 void Socket_client::process_response() {
