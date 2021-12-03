@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include "utils.hpp"
 #include "Request.hpp"
@@ -20,7 +21,7 @@ class Socket_client {
 	std::string		buffer_send;
 	std::string		addr;
 	std::string		port;
-	e_http_state	state;
+	int				state;
 	Cgi				cgi;
 	Request			request;
 	Response		response;
@@ -44,10 +45,6 @@ class Socket_client {
 	void prepare_response();
 	void process_response();
 
-	void setup_cgi(void);
-	void prepare_pipes(void);
-	void process_cgi(void);
-
 	bool is_valid_uri(std::string const & str);
 	const std::string & check_method(void);
 
@@ -57,7 +54,11 @@ class Socket_client {
 	void big_what(void) const;
 
 	private:
-	
+
+	void _setup_cgi(void);
+	void _prepare_pipes(void);
+	void _process_cgi(void);
+	void _exec_cgi(void);
 	void _process_error_page(void);
 	void _process_return(void);
 	void _process_upload(void);

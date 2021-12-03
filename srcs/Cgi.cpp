@@ -17,14 +17,14 @@ Cgi::~Cgi(void)
 
 void Cgi::close_pipe_worker_side(void)
 {
-	close(input[1]);
-	close(output[0]);
+	close(input[0]);
+	close(output[1]);
 }
 
 void Cgi::close_pipe_cgi_side(void)
 {
-	close(input[0]);
-	close(output[1]);
+	close(input[1]);
+	close(output[0]);
 }
 
 void Cgi::what(void) const

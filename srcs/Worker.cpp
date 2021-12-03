@@ -99,7 +99,7 @@ void Worker::recv_client(int i)
 #endif 
 	client.buffer_recv.append(buffer, _event_list[i].data);
 	/* After receiving data, we register a user event to wakeup process_client */
-	if (client.state < RESPONSE)
+	if (!(client.state & RESPONSE))
 		update_modif_list(client.fd, EVFILT_USER,
 			EV_ADD | EV_ONESHOT, NOTE_TRIGGER);
 
@@ -181,16 +181,31 @@ void Worker::read_client(int i)
 #endif 
 
 	char buffer[_event_list[i].data];
-
+	
 	read(fd_file, buffer, _event_list[i].data);
 	client.response.body.append(buffer, _event_list[i].data);
-
+	client.state |= READY_CGI;	
+	update_modif_list(client.fd, EVFILT_USER,
+			EV_ADD | EV_ONESHOT, NOTE_TRIGGER);
+	client.state &= ~NEED_READ;
 }
 
 // upload 
 void Worker::write_client(int i)
 {
-	(void)i;
+	int fd_file = _event_list[i].ident;
+	Socket_client & client = _socket_clients[(long)_event_list[i].udata];
+	if (!(client.state & NEED_WRITE))
+		return;
+#ifdef DEBUG
+	std::cout << "[Worker] -   Write client -> ";
+	client.what();
+	std::cout << "\n";
+#endif 
+
+	write(fd_file, client.request.body.c_str(), client.request.content_length);
+	client.request.body.erase(0, client.request.content_length);
+	client.state &= ~NEED_WRITE;
 }
 
 void Worker::process_client(int i)
@@ -199,11 +214,11 @@ void Worker::process_client(int i)
 	Socket_client & client = _socket_clients[_event_list[i].ident];
 
 	#ifdef DEBUG
-		std::cout << "[Worker] -   hundle client -> ";
+		std::cout << "[Worker] -   process client -> ";
 		_socket_clients[client.fd].what();
 		std::cout << "\n";
 	#endif 
-	if (client.state < RESPONSE) 
+	if (!(client.state & RESPONSE)) 
 	{
 		if (client.state == REQUEST_LINE)
 			client.process_request_line();
@@ -218,7 +233,8 @@ void Worker::process_client(int i)
 			client.process_body();
 		}
 	}
-	if (client.state >= RESPONSE) 
+	
+	if (client.state & RESPONSE)
 	{
 		if (client.state == RESPONSE)
 		{	
@@ -228,13 +244,13 @@ void Worker::process_client(int i)
 				update_modif_list(_event_list[i].ident, EVFILT_READ, EV_DELETE);
 		}
 		client.process_response();
-		if (client.state == NEED_READ)
-			update_modif_list(client.fd_read, EVFILT_READ, EV_ADD,
+		if (client.state & NEED_READ)
+			update_modif_list(client.fd_read, EVFILT_READ , EV_ADD | EV_ONESHOT ,
 				0, 0,(void *)((long)client.fd));
-		if (client.state == NEED_WRITE)
-			update_modif_list(client.fd_write, EVFILT_WRITE, EV_ADD,
+		if (client.state & NEED_WRITE)
+			update_modif_list(client.fd_write, EVFILT_WRITE, EV_ADD | EV_ONESHOT ,
 					0, 0,(void *)((long)client.fd));
-		if(client.state == READY)
+		if(client.state & READY)
 			update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);
 	}
 }

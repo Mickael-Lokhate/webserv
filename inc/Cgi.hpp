@@ -8,6 +8,8 @@ class Cgi {
 
 	public:
 
+		std::string					path;
+		std::string					pwd;
 		std::string					query_string;
 		std::string					request_method;
 		std::string					content_type;
