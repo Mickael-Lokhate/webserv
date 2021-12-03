@@ -586,21 +586,31 @@ void Socket_client::_process_cgi() {
 
 }
 
-void Socket_client::_process_error_page()
-{
-	// state = NEED_READ;
-	// check if response.status corresponding to an error_page
-	// Open response.status corresponding file
-	// update response.body
-	// if bad file in an error page => 404 
+void Socket_client::process_response() {
+	// Check if response status is != 0
+	// limit_except
+	if (state & ERROR || state & FATAL_ERROR)
+		_set_error(response.status);
+	if (route.limit_except.size() && (find(route.limit_except.begin(), route.limit_except.end(), request.method) == route.limit_except.end())) {
+		response.status = 405;
+	}
+	else if (!route.return_.first.empty())
+		_process_return();
+	else if (!route.upload.empty())
+		_process_upload();
+	else if (!route.cgi.empty())
+		;//process_cgi();
+	else
+		_process_normal();
+	// cgi
+	// get folder or file ou error_file(when response.status == 400 501 405 ...)
 }
 
 void Socket_client::_process_return()
 {
 	response.status = to_number<short>(route.return_.first);
 	response.location = route.return_.second;
-	//TODO
-	state = NEED_READ;
+	state = READY;
 }
 
 void Socket_client::_process_upload()
@@ -638,16 +648,19 @@ void Socket_client::_process_normal()
 						response.status = 200;
 						response.content_length = _get_file_size(fd_read);
 						if (request.method.compare("GET") == 0)
-							state = NEED_READ;
+							state |= NEED_READ;
 						else
-							state = READY;
-						return ;		
-					}	
+							state |= READY;
+						return ;
+					}
 				}
+				if (route.autoindex.compare("on") == 0)
+					;// CALL DIRECTORY LISTING AND RETURN
+				return _set_error(404);
 			}
 			if (route.autoindex.compare("on") == 0)
 				;// CALL DIRECTORY LISTING AND RETURN
-			return _set_error(404);	
+			return _set_error(403);
 		}
 		else
 		{
@@ -656,9 +669,9 @@ void Socket_client::_process_normal()
 				response.status = 200;
 				response.content_length = _get_file_size(fd_read);
 				if (request.method.compare("GET") == 0)
-					state = NEED_READ;
+					state |= NEED_READ;
 				else
-					state = READY;
+					state |= READY;
 				return ;
 			}
 			return _set_error(404);
@@ -669,37 +682,41 @@ void Socket_client::_process_normal()
 		if (unlink(path.c_str()) == 0)
 		{
 			response.status = 204; // DELETE  OK but no more information to send
-			state = READY;
+			state |= READY;
 			return ;
 		}
-		return _set_error(404); 
+		return _set_error(404);
 	}
-	// Check method 
-	// if post 
-		// ?
-	// if put
-		// ?
+	else
+	{
+		response.status = 200;
+		state != READY;
+	}
 }
 
 void Socket_client::_set_error(short code)
 {
 	response.status = code;
-	if (1)//!route.error_page[to_string(code)].emtpy())
+	if ((route.error_page[to_string(code)]).size() > 0)
 	{
 		if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
 			response.status = 301;
 		else
 			response.status = 308;
 		response.location = route.error_page[to_string(code)];
+		state |= READY;
+		return ;
 	}
 	else
 	{
 		route.error_page.erase(to_string(code));
 		if (request.method.compare("HEAD") != 0)
-			response.body = "tmp";//error[code];
-		response.content_length = 5;//error[code].size();
+			response.body = "tmp";//default_page[code];
+		response.content_length = 5;//default_page[code].size();
+		response.content_type = "text/html";
+		state |= READY;
+		return ;
 	}
-	state = READY;
 }
 
 size_t Socket_client::_get_file_size(int fd)
