@@ -48,7 +48,12 @@ void	TesterServer::add_route(void)
 	directorypy.ext = "py";
 	Route directorytest;
 	directorytest.location = "/directory/test";
+	Route directorybla;
+	directorybla.location = "/directory";
+	directorybla.ext = "bla";
 	try {
+		server.add_route(directorybla);
+		_assert_same(0);
 		server.add_route(defaultphp);
 		_assert_same(0);
 		server.add_route(defaultpy);
@@ -130,6 +135,24 @@ void	TesterServer::choose_route(void)
 	expectedloc = "";
 	expectedext = "";
 	route = server.choose_route("/");
+	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
+	#ifdef DEBUG
+		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
+		std::cout << "[" << route.ext << "]" << std::endl << "[" << expectedext << "]" << std::endl;
+	#endif
+
+	expectedloc = "/directory";
+	expectedext = "bla";
+	route = server.choose_route("/directory/test.bla");
+	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
+	#ifdef DEBUG
+		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
+		std::cout << "[" << route.ext << "]" << std::endl << "[" << expectedext << "]" << std::endl;
+	#endif
+
+	expectedloc = "/directory";
+	expectedext = "";
+	route = server.choose_route("/directory");
 	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
 	#ifdef DEBUG
 		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
