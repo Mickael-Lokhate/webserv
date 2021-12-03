@@ -550,15 +550,17 @@ void Socket_client::process_response() {
 	// Check if response status is != 0
 	//
 	if (response.status != 0)
-		_process_error_page();
+		_set_error(response.status);
 	else if (!route.return_.first.empty())
 		_process_return();
-	else if (!route.upload.empty())
+	else if (!route.upload.empty() && (request.method.compare("POST") == 0 || request.method.compare("PUT") == 0))
 		_process_upload();
 	else if (!route.cgi.empty())
 		_process_cgi();
 	else
 		_process_normal();
+	std::cout << "--RESPONSE--" << std::endl;
+	response.what();
 	// cgi
 	// get folder or file ou error_file(when response.status == 400 501 405 ...)
 }
@@ -589,16 +591,21 @@ void Socket_client::_process_return()
 {
 	response.status = to_number<short>(route.return_.first);
 	response.location = route.return_.second;
-	state = READY;
+	state |= READY;
 }
 
 void Socket_client::_process_upload()
 {
-	// Get Request body
-	// state = NEED_WRITE;
-	// Write uri file in the route.upload path
-	// response.status = ?
-	// state = READY;
+	if (_is_dir(route.upload.c_str()))
+		return _set_error(403);
+	if ((fd_read = open(route.upload.c_str(), O_RDWR | O_CREAT | O_NONBLOCK)) != -1)
+	{
+		state = NEED_WRITE;
+		if (!response.status)
+			response.status = 201; //created
+	}
+	return _set_error(403);
+
 }
 
 void Socket_client::_process_normal()
@@ -613,6 +620,8 @@ void Socket_client::_process_normal()
 		else
 			path.insert(0, route.root.first);
 	}
+	if (path.at(0) == '/')
+		path.insert(0, ".");
 	if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
 	{
 		if (_is_dir(path.c_str()))
@@ -621,10 +630,13 @@ void Socket_client::_process_normal()
 			{
 				for (std::vector<std::string>::iterator it = route.index.begin(); it != route.index.end(); ++it)
 				{
+					if (*(path.end() - 1) != '/' && (*it).at(0) != '/')
+						path.push_back('/');
 					std::string tmp_path = path + *it;
 					if ((fd_read = open(tmp_path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
 					{
-						response.status = 200;
+						if (!response.status)
+							response.status = 200;
 						response.content_length = _get_file_size(fd_read);
 						if (request.method.compare("GET") == 0)
 							state |= NEED_READ;
@@ -634,18 +646,19 @@ void Socket_client::_process_normal()
 					}
 				}
 				if (route.autoindex.compare("on") == 0)
-					;// CALL DIRECTORY LISTING AND RETURN
+					generate_directory_listing();
 				return _set_error(404);
 			}
 			if (route.autoindex.compare("on") == 0)
-				;// CALL DIRECTORY LISTING AND RETURN
+				generate_directory_listing();
 			return _set_error(403);
 		}
 		else
 		{
 			if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
 			{
-				response.status = 200;
+				if (!response.status)
+					response.status = 200;
 				response.content_length = _get_file_size(fd_read);
 				if (request.method.compare("GET") == 0)
 					state |= NEED_READ;
@@ -676,18 +689,18 @@ void Socket_client::_process_normal()
 void Socket_client::_set_error(short code)
 {
 	response.status = code;
-	if ((route.error_page[to_string(code)]).size() > 0)
-	{
-		if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
-			response.status = 301;
-		else
-			response.status = 308;
-		response.location = route.error_page[to_string(code)];
-		state |= READY;
-		return ;
-	}
-	else
-	{
+	//if ((route.error_page[to_string(code)]).size() > 0)
+	//{
+//		if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
+//			response.status = 301;
+//		else
+//			response.status = 308;
+//		response.location = route.error_page[to_string(code)];
+//		state |= READY;
+//		return ;
+//	}
+//	else
+//	{
 		route.error_page.erase(to_string(code));
 		if (request.method.compare("HEAD") != 0)
 			response.body = "tmp";//default_page[code];
@@ -695,7 +708,7 @@ void Socket_client::_set_error(short code)
 		response.content_type = "text/html";
 		state |= READY;
 		return ;
-	}
+//	}
 }
 
 size_t Socket_client::_get_file_size(int fd)
@@ -710,5 +723,5 @@ bool Socket_client::_is_dir(const char* path)
 {
 	struct stat buf;
 	stat(path, &buf);
-	return S_ISDIR(buf.st_mode) ? true : false;
+	return S_ISDIR(buf.st_mode);
 }
