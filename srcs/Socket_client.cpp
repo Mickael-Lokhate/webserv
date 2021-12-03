@@ -1,5 +1,8 @@
 #include "Socket_client.hpp"
 
+extern std::map<short, std::string> status_msgs;
+extern std::map<short, std::string> default_pages;
+
 Socket_client::Socket_client(int fd, const std::string & addr, 
 								const std::string & port, Socket_server * socket_server) :
 	fd(fd),
@@ -282,6 +285,7 @@ void Socket_client::process_request_line()
 		state = ROUTE;
 		return;
 	}
+	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
 }
 
@@ -289,12 +293,13 @@ void Socket_client::process_headers()
 {
 	std::string							key;
 	std::string							val;
-	size_t								cursor = 0;
+	size_t								cursor;
 	size_t								found;
 	size_t								colon;
 
 	for (;;)
 	{
+		cursor = 0;
 		found = buffer_recv.find(request.delim, cursor);
 		if (found == std::string::npos) {
 			state = HEADERS;
@@ -451,13 +456,22 @@ void Socket_client::process_body() {
 			return ;
 		}
 	}
+	if (!response.status && request.content_length > std::stol(route.max_body_size)) {
+		response.status = 403;
+		state = RESPONSE;
+		return;
+	}	
 	state = BODY;
 }
 
 
 void Socket_client::prepare_response() {
 	//	choose server + route
+	//	detecte error case relative to request 
+	//	and update response.status
+
 	//big_what();
+	/*
 	std::vector<Server *>::iterator it = socket_server->servers.begin();
 	while (it != socket_server->servers.end()) {
 		if (find((*it)->server_name.begin(), (*it)->server_name.end(), request.host) != (*it)->server_name.end()) {
@@ -469,19 +483,174 @@ void Socket_client::prepare_response() {
 	}
 	if (it == socket_server->servers.end()) {
 		route = (socket_server->servers[0])->choose_route("");
-		server = socket_server->servers[0];
+		server = socket_server->servers[0]; 
 	}
+	*/
+	server = socket_server->servers[0]; 
+	route = (socket_server->servers[0])->routes[0];
+
 	route.what();
-	//	detecte error case relative to request 
-	//	and update response.status
+	
+	if (response.status == 400 || response.status == 501) {
+		state = RESPONSE;
+		return ;
+	}
+
+	// limit_except
+	if (route.limit_except.size() && find(route.limit_except.begin(), route.limit_except.end(), request.method) == route.limit_except.end()) {
+		response.status = 405;
+	}
+	state = BODY;
 }
 
 void Socket_client::process_response() {
-	// return
-	// upload
+	exit(0);
+	// Check if response status is != 0
+	if (response.status != 0)
+		_process_error_page();
+	else if (!route.return_.first.empty())
+		_process_return();
+	else if (!route.upload.empty())
+		_process_upload();
+	else if (!route.cgi.empty())
+		;//process_cgi();
+	else
+		_process_normal();
 	// cgi
 	// get folder or file ou error_file(when response.status == 400 501 405 ...)
 }
 
-void process_cgi() {
+void Socket_client::_process_error_page()
+{
+	// state = NEED_READ;
+	// check if response.status corresponding to an error_page
+	// Open response.status corresponding file
+	// update response.body
+	// if bad file in an error page => 404 
 }
+
+void Socket_client::_process_return()
+{
+	response.status = to_number<short>(route.return_.first);
+	response.location = route.return_.second;
+	//TODO
+	state = NEED_READ;
+}
+
+void Socket_client::_process_upload()
+{
+	// Get Request body
+	// state = NEED_WRITE;
+	// Write uri file in the route.upload path
+	// response.status = ?
+	// state = READY;
+}
+
+void Socket_client::_process_normal()
+{
+	std::string path = request.uri;
+	if (*(path.end() - 1) != '/')
+		path.push_back('/');
+	if (!route.root.first.empty())
+	{
+		if (route.root.second)
+			path = route.root.first;
+		else
+			path.insert(0, route.root.first);
+	}
+	if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
+	{
+		if (_is_dir(path.c_str()))
+		{
+			if (!route.index.empty())
+			{
+				for (std::vector<std::string>::iterator it = route.index.begin(); it != route.index.end(); ++it)
+				{
+					std::string tmp_path = path + *it;
+					if ((fd_read = open(tmp_path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
+					{
+						response.status = 200;
+						response.content_length = _get_file_size(fd_read);
+						if (request.method.compare("GET") == 0)
+							state = NEED_READ;
+						else
+							state = READY;
+						return ;		
+					}	
+				}
+			}
+			if (route.autoindex.compare("on") == 0)
+				;// CALL DIRECTORY LISTING AND RETURN
+			return _set_error(404);	
+		}
+		else
+		{
+			if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
+			{
+				response.status = 200;
+				response.content_length = _get_file_size(fd_read);
+				if (request.method.compare("GET") == 0)
+					state = NEED_READ;
+				else
+					state = READY;
+				return ;
+			}
+			return _set_error(404);
+		}
+	}
+	else if (request.method.compare("DELETE") == 0)
+	{
+		if (unlink(path.c_str()) == 0)
+		{
+			response.status = 204; // DELETE  OK but no more information to send
+			state = READY;
+			return ;
+		}
+		return _set_error(404); 
+	}
+	// Check method 
+	// if post 
+		// ?
+	// if put
+		// ?
+}
+
+void Socket_client::_set_error(short code)
+{
+	response.status = code;
+	if (!route.error_page[to_string(code)].emtpy())
+	{
+		if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
+			response.status = 301;
+		else
+			response.status = 308;
+		response.location = route.error_page[to_string(code)];
+	}
+	else
+	{
+		route.error_page.erase(to_string(code));
+		if (request.method.compare("HEAD") != 0)
+			response.body = "tmp";//error[code];
+		response.content_length = 5;//error[code].size();
+	}
+	state = READY;
+}
+
+size_t Socket_client::_get_file_size(int fd)
+{
+	off_t	size;
+	size = lseek(fd, 0, SEEK_END);
+	lseek(fd, 0, SEEK_SET);
+	return size;
+}
+
+bool Socket_client::_is_dir(const char* path)
+{
+	struct stat buf;
+	stat(path, &buf);
+	return S_ISDIR(buf.st_mode) ? true : false;
+}
+
+void Socket_client::process_cgi() {
+}
+

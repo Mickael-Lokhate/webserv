@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include <string>
 #include <sstream>  
 #include <iostream>
@@ -11,6 +12,7 @@
 
 #define SPACE 1
 #define COLON 1
+#define CRLF "\r\n"
 
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);
@@ -76,3 +78,6 @@ std::string _rtrim(const std::string &s);
 std::string _tolower(const std::string & str);
 ssize_t _hexstr_to_int(std::string const & hexstr);
 std::string  _statetostr(e_http_state st);
+
+void add_status_msgs();
+void add_default_pages();

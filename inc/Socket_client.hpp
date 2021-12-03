@@ -1,6 +1,11 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include "utils.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
 #include "Cgi.hpp"
@@ -23,7 +28,7 @@ class Socket_client {
     Socket_server   * socket_server;
 	int				fd_read;
 	int 			fd_write;
-    Server			* server;
+	Server			* server;
 
 	Socket_client(int fd = -1, const std::string & addr = "no_adr", 
 						const std::string & port = "no_port", 
@@ -51,4 +56,13 @@ class Socket_client {
 	void what(void) const;
 	void big_what(void) const;
 
+	private:
+	
+	void _process_error_page(void);
+	void _process_return(void);
+	void _process_upload(void);
+	void _process_normal(void);
+	void _set_error(short code);
+	size_t  _get_file_size(int fd);
+	bool	_is_dir(const char* path);
 };
