@@ -71,6 +71,47 @@ bool Socket_client::is_valid_uri(std::string const & str) {
 	return true;
 }
 
+void Socket_client::generate_directory_listing(void)
+{
+	std::string					path = request.uri;
+	DIR *						d = opendir(path.c_str());
+	struct dirent * 			dp;
+	struct stat					inf;
+	char						buf[100];
+	static const	std::string	top = "<!DOCTYPE html>\r\n<html>\r\n\t<head>\r\n\t<title>";
+	static const	std::string bot = "\t</table>\r\n\t</body>\r\n</html>";
+	static const	std::string col = "<tr>\r\n<th scope=\"col\">Name</th>\r\n<th scope=\"col\">"
+		"Last-modified</th>\r\n<th scope=\"col\">Size</th>\r\n</tr>\r\n";
+	static const	std::string sep = "\t\t<tr><th colspan=\"5\"><hr></th></tr>\r\n";
+
+	if (!d)
+		throw std::runtime_error(strerror(errno));
+	response.body.append(top);
+	response.body.append("Index of " + path + "</title>\r\n\t</head>\r\n\t<body>\r\n\t" +
+				"<h1>Index of " + path + "</h1>\r\n\t<table>\r\n");
+	response.body.append(col);
+	response.body.append(sep);
+	while ((dp = readdir(d)) != NULL)
+	{
+		if (!strftime(buf, 100, "%D %T", gmtime(&inf.st_mtimespec.tv_sec)))
+			throw std::runtime_error("strftime");
+		std::string file = path + "/" + dp->d_name;
+		if (stat(file.c_str(), &inf) == -1)
+			throw std::runtime_error(strerror(errno));
+		response.body.append("\t\t<tr><td valign=\"top\"><a href=\"" + file + "\">" +
+					/* Name */
+					std::string(dp->d_name) + "</a></td>" +
+					/* Last-modified */
+					"<td align=\"right\">" + buf + "</td>" +
+					/* Size */
+					"<td align=\"right\">" + std::to_string(inf.st_size) +
+					"</td></tr>\r\n");
+	}
+	response.body.append(sep);
+	response.body.append(bot);
+	closedir(d);
+}
+
 static void _abort(void)
 {
 	std::cout << "[Cgi] - child: " << std::string(strerror(errno)) << std::endl;
