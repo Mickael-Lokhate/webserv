@@ -240,7 +240,7 @@ void Worker::process_client(int i)
 		{	
 			update_modif_list(client.fd, EVFILT_TIMER,
 					EV_ADD, NOTE_SECONDS, TO_RESPONSE);
-			if (client.response.status == 400 || client.response.status == 501)
+			if (client.state & CLOSED)
 				update_modif_list(_event_list[i].ident, EVFILT_READ, EV_DELETE);
 		}
 		client.process_response();
@@ -316,6 +316,7 @@ void Worker::event_loop(void)
 				std::cerr << "Worker::event_loop: " << e.what() << std::endl;
 			}
 		}
+		/* ajouter les fichiers ainsi que les pipes */
 		_event_list.resize(_socket_clients.size() +
 							+ _modif_list.size() + _socket_servers.size());
 	}
