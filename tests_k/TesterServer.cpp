@@ -126,6 +126,15 @@ void	TesterServer::choose_route(void)
 		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
 		std::cout << "[" << route.ext << "]" << std::endl << "[" << expectedext << "]" << std::endl;
 	#endif
+
+	expectedloc = "";
+	expectedext = "";
+	route = server.choose_route("/");
+	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
+	#ifdef DEBUG
+		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
+		std::cout << "[" << route.ext << "]" << std::endl << "[" << expectedext << "]" << std::endl;
+	#endif
 }
 
 void TesterServer::delete_uri_variable(void)

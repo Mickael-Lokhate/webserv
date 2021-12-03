@@ -100,6 +100,8 @@ void	Server::_delete_duplicate_slash(std::string & loc)
 void	Server::define_token_ext(std::vector<std::string> & tk, std::string & ext)
 {
 	std::vector<std::string>::iterator ite_loc = tk.end();
+	if (tk.end() == tk.begin())
+		return ;
 	if (((ite_loc - 1)->size() - 4) >= 0 && ((ite_loc - 1)->find(".php", (ite_loc - 1)->size() - 4) != std::string::npos))
 		ext = "php";
 	else if ((((ite_loc - 1)->size() - 3) >= 0) && ((ite_loc - 1)->find(".py", (ite_loc - 1)->size() - 3) != std::string::npos))
