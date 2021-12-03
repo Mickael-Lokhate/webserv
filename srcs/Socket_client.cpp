@@ -493,16 +493,14 @@ void Socket_client::process_body() {
 			std::cout << "rest : {" << buffer_recv << "}\n" ;
 			std::cout << e.what() << "\n";
 			#endif
-			response.status = 400;
 			state = RESPONSE;
-			state |= (CLOSED | ERROR);
+			_update_stat(ERROR | CLOSED, 400);
 			return ;
 		}
 	}
 	if (!response.status && request.content_length > std::stol(route.max_body_size)) {
-		response.status = 413;
 		state = RESPONSE;
-		state |= (CLOSED | ERROR);
+		_update_stat(ERROR | CLOSED, 413);
 		return;
 	}	
 	state = BODY;
@@ -547,15 +545,28 @@ void Socket_client::process_response() {
 	if (state & ERROR)
 	{
 		if (route.error_page.find(to_string(response.status)) != route.error_page.end())
+		{
 			route = server->choose_route(route.error_page[to_string(response.status)]);
-		else
+			request.method = "GET";
+		}
+		else 
+		{
 			response.body = default_pages[response.status];
+			state = READY;
+			return ;
+		}
 	}
 	if (route.limit_except.size() && find(route.limit_except.begin(),
 		route.limit_except.end(), request.method) == route.limit_except.end())
 	{
-		state |= ERROR;
-		response.status = 405;
+		if (response.status) {
+			response.body = default_pages[405];
+			state = READY;
+			response.status = 405;
+			return ;
+		}
+		_update_stat(ERROR, 405);
+		process_response();
 	}
 	else if (!route.return_.first.empty())
 		_process_return();
@@ -595,21 +606,24 @@ void Socket_client::_process_return()
 {
 	response.status = to_number<short>(route.return_.first);
 	response.location = route.return_.second;
-	state |= READY;
+	state = READY;
 }
 
 void Socket_client::_process_upload()
 {
-	if (_is_dir(route.upload.c_str()))
-		return _set_error(403);
+	if (!_is_dir(route.upload.c_str())) {
+		_update_stat(ERROR, 500);
+		process_response();
+		return;
+	}
 	if ((fd_read = open(route.upload.c_str(), O_RDWR | O_CREAT | O_NONBLOCK)) != -1)
 	{
 		state = NEED_WRITE;
-		if (!response.status)
-			response.status = 201; //created
+		response.status = 201; //created
+		return ;
 	}
-	return _set_error(403);
-
+	_update_stat(ERROR, 403);
+	process_response();
 }
 
 void Socket_client::_process_normal()
@@ -645,7 +659,7 @@ void Socket_client::_process_normal()
 						if (request.method.compare("GET") == 0)
 							state |= NEED_READ;
 						else
-							state |= READY;
+							state = READY;
 						return ;
 					}
 				}
@@ -667,7 +681,7 @@ void Socket_client::_process_normal()
 				if (request.method.compare("GET") == 0)
 					state |= NEED_READ;
 				else
-					state |= READY;
+					state = READY;
 				return ;
 			}
 			return _set_error(404);

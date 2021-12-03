@@ -232,17 +232,16 @@ void Worker::process_client(int i)
 				EV_ADD, NOTE_SECONDS, TO_BODY);
 			client.process_body();
 		}
-	}
-	
-	if (client.state & RESPONSE)
-	{
-		if (client.state == RESPONSE)
-		{	
+		if (client.state & RESPONSE) {
 			update_modif_list(client.fd, EVFILT_TIMER,
 					EV_ADD, NOTE_SECONDS, TO_RESPONSE);
 			if (client.state & CLOSED)
 				update_modif_list(_event_list[i].ident, EVFILT_READ, EV_DELETE);
 		}
+	}
+	
+	if (client.state & RESPONSE)
+	{
 		client.process_response();
 		if (client.state & NEED_READ)
 			update_modif_list(client.fd_read, EVFILT_READ , EV_ADD | EV_ONESHOT ,
@@ -250,9 +249,9 @@ void Worker::process_client(int i)
 		if (client.state & NEED_WRITE)
 			update_modif_list(client.fd_write, EVFILT_WRITE, EV_ADD | EV_ONESHOT ,
 					0, 0,(void *)((long)client.fd));
-		if(client.state & READY)
-			update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);
 	}
+	if(client.state == READY)
+		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD);
 }
 
 void Worker::event_loop(void)
