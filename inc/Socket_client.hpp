@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <sys/types.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -44,6 +45,9 @@ class Socket_client {
 
 	void prepare_response();
 	void process_response();
+
+
+	void generate_directory_listing(void);
 
 	bool is_valid_uri(std::string const & str);
 	const std::string & check_method(void);

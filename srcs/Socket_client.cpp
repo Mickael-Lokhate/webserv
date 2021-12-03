@@ -550,6 +550,7 @@ void Socket_client::process_response() {
 	_process_cgi();
 	return ;
 	// Check if response status is != 0
+	//
 	if (response.status != 0)
 		_process_error_page();
 	else if (!route.return_.first.empty())
@@ -584,26 +585,6 @@ void Socket_client::_process_cgi() {
 		return;
 	}
 
-}
-
-void Socket_client::process_response() {
-	// Check if response status is != 0
-	// limit_except
-	if (state & ERROR || state & FATAL_ERROR)
-		_set_error(response.status);
-	if (route.limit_except.size() && (find(route.limit_except.begin(), route.limit_except.end(), request.method) == route.limit_except.end())) {
-		response.status = 405;
-	}
-	else if (!route.return_.first.empty())
-		_process_return();
-	else if (!route.upload.empty())
-		_process_upload();
-	else if (!route.cgi.empty())
-		;//process_cgi();
-	else
-		_process_normal();
-	// cgi
-	// get folder or file ou error_file(when response.status == 400 501 405 ...)
 }
 
 void Socket_client::_process_return()
@@ -690,7 +671,7 @@ void Socket_client::_process_normal()
 	else
 	{
 		response.status = 200;
-		state != READY;
+		state |= READY;
 	}
 }
 
