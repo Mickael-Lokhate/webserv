@@ -11,8 +11,6 @@
 #include "Worker.hpp"
 #include "utils.hpp"
 
-
-
 class Master {
 	private:
 		static const std::string _DEFAULT_CONF;
@@ -24,7 +22,7 @@ class Master {
 		Master(std::string const & file_config);
 		void init();
 		void work();
-		void what();
+		void what() const;
 	private:
 		static void listen_(std::pair<int, Socket_server> & ss);
 		void _add_servers(Socket_server & socket_server);

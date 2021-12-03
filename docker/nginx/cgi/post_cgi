@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-echo "Content-type: text/html"
-echo ""	
-env > env
+cat
+env
+sleep 3

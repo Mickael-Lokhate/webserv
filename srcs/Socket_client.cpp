@@ -1,19 +1,7 @@
 #include "Socket_client.hpp"
 
-Socket_client::Socket_client() : 
-	fd(-1),
-	buffer_recv(),
-	buffer_send(),
-	addr("none"),
-	port("nonw"),
-	state(REQUEST_LINE),
-	socket_server(NULL),
-	fd_read(-1),
-	fd_write(-1),
-	pid_cgi(-1)
-{
-	;
-}
+extern std::map<short, std::string> status_msgs;
+extern std::map<short, std::string> default_pages;
 
 Socket_client::Socket_client(int fd, const std::string & addr, 
 								const std::string & port, Socket_server * socket_server) :
@@ -21,7 +9,9 @@ Socket_client::Socket_client(int fd, const std::string & addr,
 	addr(addr),
 	port(port),
 	state(REQUEST_LINE),
-	socket_server(socket_server)
+	socket_server(socket_server),
+	fd_read(-1),
+	fd_write(-1)
 {
 	;
 }
@@ -39,18 +29,17 @@ Socket_client::~Socket_client(void)
 Socket_client & Socket_client::operator=(const Socket_client & ref)
 {
 	fd = ref.fd;
-	request = Request();
 	buffer_recv = ref.buffer_recv;
 	buffer_send = ref.buffer_send;
 	addr = ref.addr;
 	port = ref.port;
 	state = ref.state;
+	request = Request();
 	response = ref.response;
 	route = ref.route;
 	socket_server = ref.socket_server;
 	fd_read = ref.fd_read;
 	fd_write = ref.fd_write;
-	pid_cgi = ref.pid_cgi;
 	return *this;
 }
 
@@ -59,10 +48,177 @@ void Socket_client::what(void) const
 	std::cout << "[" << fd << "] - " << addr << ":" << port;
 }
 
+void Socket_client::big_what(void) const
+{
+	std::cout << "fd : {" << fd << "}\n";
+	std::cout << "addr : {" << addr << "}\n";
+   	std::cout << "port : {" << port << "}\n";
+	std::cout << "buffer_recv : {" << buffer_recv << "}\n";
+	std::cout << "buffer_send : {" << buffer_send << "}\n";
+	std::cout << "state : {" << state << "}\n";
+	request.what();
+	response.what();
+	route.what();
+	cgi.what();
+	std::cout << "fd_read : {" << fd_read << "}\n";
+	std::cout << "fd_write : {" << fd_write << "}\n";
+	socket_server->big_what();
+}
+
 bool Socket_client::is_valid_uri(std::string const & str) {
 	if (str[0] != '/')
 		return false;
 	return true;
+}
+
+static void _abort(void)
+{
+	std::cout << "[Cgi] - child: " << std::string(strerror(errno)) << std::endl;
+	_exit(EXIT_FAILURE);
+}
+
+static std::string _extract_query(const std::string & uri)
+{
+	size_t found;
+
+	if ((found = uri.find("?")) == std::string::npos)
+		return "";
+	else return uri.substr(found + 1, std::string::npos);
+}
+
+static std::string _delete_query(const std::string & uri)
+{
+	size_t found;
+
+
+	if ((found = uri.find("?")) == std::string::npos)
+		return uri;
+	else return uri.substr(0, found);
+}
+
+void Socket_client::_setup_cgi()
+{
+	cgi.path = "PATH=" + (getenv("PATH") ? std::string(getenv("PATH")) : "");
+	cgi.pwd = "PWD=" + (getenv("PWD") ? std::string(getenv("PWD")) : "");
+	cgi.query_string = "QUERY_STRING=" + _extract_query(request.uri);
+	cgi.request_method = "REQUEST_METHOD=" + request.method;
+	cgi.content_type = "CONTENT_TYPE=" + request.headers["content-type"];
+	cgi.content_length = "CONTENT_LENGTH=" + request.headers["content-length"];
+	cgi.path_translated = "PATH_TRANSLATED=" + route.root.first + request.uri;
+	cgi.script_name = "SCRIPT_NAME=" + _delete_query(request.uri);
+	cgi.request_uri = "REQUEST_URI=" + request.uri;
+	cgi.document_uri = "DOCUMENT_URI=" + _delete_query(request.uri);
+	cgi.remote_addr = "REMOTE_ADDR=" + addr;
+	cgi.remote_port = "REMOTE_PORT=" + port;
+	cgi.server_port = "SERVER_PORT=" + server->port;
+	cgi.server_name = "SERVER_NAME=" + server->address;
+	cgi.script_filename = "SCRIPT_FILENAME=" + route.cgi;
+	cgi.path_info = "PATH_INFO=" + _delete_query(request.uri);
+
+	cgi.envp.push_back(cgi.path.begin().base());
+	cgi.envp.push_back(cgi.pwd.begin().base());
+	/* static environment */
+	cgi.envp.push_back(cgi.server_protocol.begin().base());
+	cgi.envp.push_back(cgi.request_scheme.begin().base());
+	cgi.envp.push_back(cgi.gateway_interface.begin().base());
+	cgi.envp.push_back(cgi.server_software.begin().base());
+	/* ------------------ */
+	cgi.envp.push_back(cgi.query_string.begin().base());
+	cgi.envp.push_back(cgi.request_method.begin().base());
+	cgi.envp.push_back(cgi.content_type.begin().base());
+	cgi.envp.push_back(cgi.content_length.begin().base());
+	cgi.envp.push_back(cgi.script_name.begin().base());
+	cgi.envp.push_back(cgi.request_uri.begin().base());
+	cgi.envp.push_back(cgi.document_uri.begin().base());
+	cgi.envp.push_back(cgi.remote_addr.begin().base());
+	cgi.envp.push_back(cgi.remote_port.begin().base());
+	cgi.envp.push_back(cgi.server_name.begin().base());
+	cgi.envp.push_back(cgi.script_filename.begin().base());
+	cgi.envp.push_back(cgi.path_info.begin().base());
+	cgi.envp.push_back(NULL);
+}
+
+/*
+ 
+   		  Le Worker écrit dans INPUT[1] et CGI lit dans INPUT[0]
+   		 Le Worker lit dans OUTPUT[0] et CGI écrit dans OUTPUT[1]
+ 
+ 
+ 			                  ----------------
+
+
+ 
+               input[1] <=> write_fs                    input[0]
+
+                +-+-------------------------------------+-+
+      +------>  | |            |---------->             | |  +------+
+      |         +-+-------------------------------------+-+         |
+      +                                                             v
+                         +----------------------+
++----------+             |  Cgi {               |             +----------+
+|          |             |                      |             |          |
+|  Worker  |             |      int input[2];   |             |    Cgi   |
+|          |             |      int output[2];  |             |          |
++----------+             |  };                  |             +----------+
+                         +----------------------+
+      ^                                                             +
+      |         +-+-------------------------------------+-+         |
+      +------+  | |            <----------|             | |  <------+
+                +-+-------------------------------------+-+
+
+            output[0] <=> read_fs                    output[1]
+
+*/
+
+void Socket_client::_prepare_pipes(void)
+{
+
+#ifdef DEBUG
+	std::cout << "[Cgi] - start CGI initialization" << std::endl;
+#endif
+	if (pipe(cgi.input) == -1)
+		throw std::runtime_error(std::string(strerror(errno)));
+	if (pipe(cgi.output) == -1)
+	{
+		std::runtime_error error =
+				std::runtime_error(std::string(strerror(errno)));
+		close(cgi.input[0]);
+		close(cgi.input[1]);
+		throw error;
+	}
+	fd_read = cgi.output[0];
+	fd_write = cgi.input[1];
+}
+
+void Socket_client::_exec_cgi(void)
+{
+	pid_t pid;
+
+#ifdef DEBUG
+	std::cout << "[Cgi] - start CGI execution" << std::endl;
+#endif
+	_prepare_pipes();
+	if ((pid = fork()) == -1)
+	{
+		cgi.close_pipe_worker_side();
+		throw std::runtime_error(std::string(strerror(errno)));
+	}
+	else if (pid == 0)
+	{
+		/* we SHOULD close socket_clients, socket_server and
+		 * ALL currently opens fd..
+		 */
+		cgi.close_pipe_cgi_side();
+		if (dup2(cgi.input[0], STDIN_FILENO)   == -1 ||
+			dup2(cgi.output[1], STDOUT_FILENO) == -1)
+			_abort();
+		if (execve(route.cgi.c_str(), (char *[]){route.cgi.begin().base(),
+			_delete_query(request.uri).begin().base(), NULL}, cgi.envp.begin().base()) == -1)
+		/* Catch error with waitpid */
+			_abort();
+	}
+	cgi.close_pipe_worker_side();
+	cgi.pid = pid;
 }
 
 const std::string & Socket_client::check_method() {
@@ -126,6 +282,7 @@ void Socket_client::process_request_line()
 		state = ROUTE;
 		return;
 	}
+	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
 }
 
@@ -133,12 +290,13 @@ void Socket_client::process_headers()
 {
 	std::string							key;
 	std::string							val;
-	size_t								cursor = 0;
+	size_t								cursor;
 	size_t								found;
 	size_t								colon;
 
 	for (;;)
 	{
+		cursor = 0;
 		found = buffer_recv.find(request.delim, cursor);
 		if (found == std::string::npos) {
 			state = HEADERS;
@@ -270,17 +428,20 @@ bool Socket_client::get_ckunked_body() {
 void Socket_client::process_body() {
 	if (!(request.method == "POST" || request.method == "PUT")) {
 		state = RESPONSE;
+		state |= SETUP_CGI;
 		return;
 	}
 	if (!request.chunked) {
 		if (get_simple_body()) {
 			state = RESPONSE;
+			state |= SETUP_CGI;
 			return;
 		}
 	} else {
 		try {
 			if (get_ckunked_body()) {
 				state =  RESPONSE;
+				state |= SETUP_CGI;
 				return ;
 			}
 		} catch(std::logic_error const & e) {
@@ -292,23 +453,225 @@ void Socket_client::process_body() {
 			#endif
 			response.status = 400;
 			state = RESPONSE;
+			state |= SETUP_CGI;
 			return ;
 		}
+	}
+	if (!response.status && request.content_length > std::stol(route.max_body_size)) {
+		response.status = 403;
+		state = RESPONSE;
+		state |= SETUP_CGI;
+		return;
+	}	
+	state = BODY;
+}
+
+
+void Socket_client::prepare_response() {
+	//	choose server + route
+	//	detecte error case relative to request 
+	//	and update response.status
+
+	//big_what();
+	/*
+	std::vector<Server *>::iterator it = socket_server->servers.begin();
+	while (it != socket_server->servers.end()) {
+		if (find((*it)->server_name.begin(), (*it)->server_name.end(), request.host) != (*it)->server_name.end()) {
+			route = (*it)->choose_route(request.uri);
+			server = *it;
+			break;
+		}
+		it++;
+	}
+	if (it == socket_server->servers.end()) {
+		route = (socket_server->servers[0])->choose_route("");
+		server = socket_server->servers[0]; 
+	}
+	*/
+	server = socket_server->servers[0]; 
+	route = (socket_server->servers[0])->routes[1];
+
+	route.what();
+	
+	if (response.status == 400 || response.status == 501) {
+		state = RESPONSE;
+		return ;
+	}
+
+	// limit_except
+	if (route.limit_except.size() && find(route.limit_except.begin(), route.limit_except.end(), request.method) == route.limit_except.end()) {
+		response.status = 405;
 	}
 	state = BODY;
 }
 
-void Socket_client::prepare_response() {
-	//	get route
-	//	detecte error case relative to request
-}
-
 void Socket_client::process_response() {
-	// return
-	// upload
+	_process_cgi();
+	return ;
+	// Check if response status is != 0
+	if (response.status != 0)
+		_process_error_page();
+	else if (!route.return_.first.empty())
+		_process_return();
+	else if (!route.upload.empty())
+		_process_upload();
+	else if (!route.cgi.empty())
+		_process_cgi();
+	else
+		_process_normal();
 	// cgi
-	// get file
+	// get folder or file ou error_file(when response.status == 400 501 405 ...)
 }
 
-void process_cgi() {
+void Socket_client::_process_cgi() {
+	if (state & SETUP_CGI) {
+		_setup_cgi();
+		_exec_cgi();
+		state &= ~SETUP_CGI;
+		state |= NEED_WRITE;
+		state |= NEED_READ;
+	//	state |= WAIT_CGI;
+		return;
+	}
+	if (state & READY_CGI) {
+		close(fd_write);
+		close(fd_read);
+		waitpid(cgi.pid, NULL, 0);
+		std::cout << "body is >> " << response.body << std::endl;
+		buffer_send.append(response.body);
+		state |= READY;
+		return;
+	}
+
+}
+
+void Socket_client::_process_error_page()
+{
+	// state = NEED_READ;
+	// check if response.status corresponding to an error_page
+	// Open response.status corresponding file
+	// update response.body
+	// if bad file in an error page => 404 
+}
+
+void Socket_client::_process_return()
+{
+	response.status = to_number<short>(route.return_.first);
+	response.location = route.return_.second;
+	//TODO
+	state = NEED_READ;
+}
+
+void Socket_client::_process_upload()
+{
+	// Get Request body
+	// state = NEED_WRITE;
+	// Write uri file in the route.upload path
+	// response.status = ?
+	// state = READY;
+}
+
+void Socket_client::_process_normal()
+{
+	std::string path = request.uri;
+	if (*(path.end() - 1) != '/')
+		path.push_back('/');
+	if (!route.root.first.empty())
+	{
+		if (route.root.second)
+			path = route.root.first;
+		else
+			path.insert(0, route.root.first);
+	}
+	if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
+	{
+		if (_is_dir(path.c_str()))
+		{
+			if (!route.index.empty())
+			{
+				for (std::vector<std::string>::iterator it = route.index.begin(); it != route.index.end(); ++it)
+				{
+					std::string tmp_path = path + *it;
+					if ((fd_read = open(tmp_path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
+					{
+						response.status = 200;
+						response.content_length = _get_file_size(fd_read);
+						if (request.method.compare("GET") == 0)
+							state = NEED_READ;
+						else
+							state = READY;
+						return ;		
+					}	
+				}
+			}
+			if (route.autoindex.compare("on") == 0)
+				;// CALL DIRECTORY LISTING AND RETURN
+			return _set_error(404);	
+		}
+		else
+		{
+			if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
+			{
+				response.status = 200;
+				response.content_length = _get_file_size(fd_read);
+				if (request.method.compare("GET") == 0)
+					state = NEED_READ;
+				else
+					state = READY;
+				return ;
+			}
+			return _set_error(404);
+		}
+	}
+	else if (request.method.compare("DELETE") == 0)
+	{
+		if (unlink(path.c_str()) == 0)
+		{
+			response.status = 204; // DELETE  OK but no more information to send
+			state = READY;
+			return ;
+		}
+		return _set_error(404); 
+	}
+	// Check method 
+	// if post 
+		// ?
+	// if put
+		// ?
+}
+
+void Socket_client::_set_error(short code)
+{
+	response.status = code;
+	if (1)//!route.error_page[to_string(code)].emtpy())
+	{
+		if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
+			response.status = 301;
+		else
+			response.status = 308;
+		response.location = route.error_page[to_string(code)];
+	}
+	else
+	{
+		route.error_page.erase(to_string(code));
+		if (request.method.compare("HEAD") != 0)
+			response.body = "tmp";//error[code];
+		response.content_length = 5;//error[code].size();
+	}
+	state = READY;
+}
+
+size_t Socket_client::_get_file_size(int fd)
+{
+	off_t	size;
+	size = lseek(fd, 0, SEEK_END);
+	lseek(fd, 0, SEEK_SET);
+	return size;
+}
+
+bool Socket_client::_is_dir(const char* path)
+{
+	struct stat buf;
+	stat(path, &buf);
+	return S_ISDIR(buf.st_mode) ? true : false;
 }

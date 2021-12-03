@@ -25,7 +25,7 @@ public:
 
 	void add_route(const Route & route);
 	Route choose_route(const std::string & req);
-	void what();
+	void what() const;
 
 public:
 	Route _find_default_route(std::string const & ext);

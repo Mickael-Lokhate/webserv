@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include <string>
 #include <sstream>  
 #include <iostream>
@@ -11,6 +12,7 @@
 
 #define SPACE 1
 #define COLON 1
+#define CRLF "\r\n"
 
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);
@@ -61,14 +63,17 @@ void _what_map(std::pair<T1, T2> elmt) {
 }
 
 typedef enum http_state {
-	REQUEST_LINE,
-	HEADERS,
-	ROUTE,
-	BODY,
-	RESPONSE,
-	NEED_READ,
-	NEED_WRITE,
-	READY,
+	REQUEST_LINE = 1,
+	HEADERS = 2,
+	ROUTE = 4,
+	BODY = 8,
+	RESPONSE = 16,
+	SETUP_CGI = 32,
+	NEED_READ = 64,
+	NEED_WRITE = 128,
+	READY = 256,
+	WAIT_CGI = 512,
+	READY_CGI = 1024,
 } e_http_state;
 
 std::string _ltrim(const std::string &s);
@@ -76,3 +81,6 @@ std::string _rtrim(const std::string &s);
 std::string _tolower(const std::string & str);
 ssize_t _hexstr_to_int(std::string const & hexstr);
 std::string  _statetostr(e_http_state st);
+
+void add_status_msgs();
+void add_default_pages();

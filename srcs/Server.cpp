@@ -189,7 +189,7 @@ Route	Server::_find_default_route(std::string const & ext)
 
 Route	Server::choose_route(const std::string & req)
 {
-	std::string loc(split(req, ' ').at(1));
+	std::string loc(req);
 	_format_uri(loc);
 	std::vector<Route>::iterator it = routes.begin();
 	std::vector<Route>::iterator ite = routes.end();
@@ -221,12 +221,12 @@ Route	Server::choose_route(const std::string & req)
 	return best_match;
 }
 
-void	Server::what()
+void	Server::what() const
 {
 	std::cout << "------ Server ------" << std::endl;
-	std::vector<Route>::iterator it = routes.begin();
-	std::vector<Route>::iterator ite = routes.end();
-	std::vector<std::string>::iterator it_serv = server_name.begin();
+	std::vector<Route>::const_iterator it = routes.begin();
+	std::vector<Route>::const_iterator ite = routes.end();
+	std::vector<std::string>::const_iterator it_serv = server_name.begin();
 
 	std::cout << "address : " << address << std::endl;
 	std::cout << "port : " << port << std::endl;

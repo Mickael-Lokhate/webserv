@@ -8,13 +8,16 @@ Master::Master(std::string const & file_conf) : _file_conf(file_conf), _servers(
 
 void Master::init() {
 	std::cout << "init()" << "\n";
-	
+
+	add_status_msgs();
+	add_default_pages();
+
 	// choose file
 	if (_file_conf.empty())
 		_file_conf = _DEFAULT_CONF;
 	std::ifstream ifs (_file_conf);
 	if(!ifs.good())
-		throw std::runtime_error(STRDEBUG0);
+		throw std::runtime_error(strerror(errno));
 	Loader loader(ifs);
 	try {
 		loader.add_servers(_servers);
@@ -54,14 +57,13 @@ void Master::work() {
 	worker.event_loop();
 }
 
-void Master::what() {
+void Master::what() const {
 
 	// affiche file_conf
 	std::cout << "_DEFAULT_CONF: " << _DEFAULT_CONF << "\n";
 	std::cout << "_file_conf: " << _file_conf << "\n";
 
 	for_each(_servers.begin(), _servers.end(), _what_vector<Server>);
-	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
+	for (std::map<int, Socket_server>::const_iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
 		it->second.what();
-
 }
