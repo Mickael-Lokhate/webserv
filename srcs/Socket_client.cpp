@@ -618,7 +618,7 @@ void Socket_client::_process_normal()
 void Socket_client::_set_error(short code)
 {
 	response.status = code;
-	if (!route.error_page[to_string(code)].emtpy())
+	if (1)//!route.error_page[to_string(code)].emtpy())
 	{
 		if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
 			response.status = 301;
@@ -650,7 +650,3 @@ bool Socket_client::_is_dir(const char* path)
 	stat(path, &buf);
 	return S_ISDIR(buf.st_mode) ? true : false;
 }
-
-void Socket_client::process_cgi() {
-}
-

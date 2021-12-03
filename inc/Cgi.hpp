@@ -8,33 +8,31 @@ class Cgi {
 
 	public:
 
-		std::string			query_string;
-		std::string			request_method;
-		std::string			content_type;
-		std::string			content_length;
-		std::string			path_translated;
-		std::string			script_name;
-		std::string			request_uri;
-		std::string			document_uri;
+		std::string					query_string;
+		std::string					request_method;
+		std::string					content_type;
+		std::string					content_length;
+		std::string					path_translated;
+		std::string					script_name;
+		std::string					request_uri;
+		std::string					document_uri;
 		static std::string	server_protocol;
 		static std::string	request_scheme;
 		static std::string	gateway_interface;
 		static std::string	server_software;
-		std::string			remote_addr;
-		std::string			remote_port;
-		std::string			server_port;
-		std::string			server_name;
-		std::string			script_filename;
-		std::string			path_info;
+		std::string					remote_addr;
+		std::string					remote_port;
+		std::string					server_port;
+		std::string					server_name;
+		std::string					script_filename;
+		std::string					path_info;
 
-		pid_t				pid;
-		int					input[2];
-		int					output[2];
-		std::vector<char *>	envp;
+		pid_t						pid;
+		int							input[2];
+		int							output[2];
+		std::vector<char *>			envp;
 
 		Cgi(void);
-		Cgi(const Cgi & ref);
-		Cgi & operator=(const Cgi & ref);
 		~Cgi(void);
 		void close_pipe_worker_side(void);
 		void close_pipe_cgi_side(void);
