@@ -160,7 +160,7 @@ void	Server::_fill_route_candidate(std::vector<std::string> & loc_tk, std::vecto
 		it_loc = loc_tk.begin();
 		ite_loc = loc_tk.end();
 		tmpn_match = 0;
-		while (it_route != ite_route)
+		while ((it_route != ite_route) && (it_loc != ite_loc))
 		{
 			if (*it_route++ != *it_loc++)
 			{
