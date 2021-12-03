@@ -12,6 +12,7 @@
 #include "Response.hpp"
 #include "Cgi.hpp"
 #include "Socket_server.hpp"
+#define DIGIT 1
 
 class Socket_client {	
 
@@ -46,6 +47,7 @@ class Socket_client {
 	void prepare_response();
 	void process_response();
 
+	void _update_stat(int _state, short _status);
 
 	void generate_directory_listing(void);
 

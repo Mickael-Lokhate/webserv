@@ -274,10 +274,18 @@ const std::string & Socket_client::check_method() {
 	return (methods[i]);
 }
 
+void Socket_client::_update_stat(int _state, short _status)
+{
+	state = _state;
+	response.status = _status;
+}
+
+/* request-line   = method SP request-target SP HTTP-version CRLF */
 void Socket_client::process_request_line()
 {
 	static const std::string	version = "HTTP/1.";
 	size_t 						found;
+	size_t						spaces = 0;
 
 	found = buffer_recv.find("\n");
 	if (found == std::string::npos) {
@@ -295,32 +303,34 @@ void Socket_client::process_request_line()
 	request.method = check_method();
 	if (request.method == "err" || buffer_recv[request.method.size()] != ' ')
 	{
-		response.status = 400;
-		state = ROUTE;
+		_update_stat(ROUTE | ERROR | CLOSED, 400);
 		return;
 	}
-	found = buffer_recv.find(" ", request.method.size() + SPACE);
+	while (buffer_recv[request.method.size() + spaces] == ' ' )
+		++spaces;
+	found = buffer_recv.find(" ", request.method.size() + spaces);
 	if (found == std::string::npos) {
-		response.status = 400;
-		state = ROUTE;
-		return;
-	}
-	request.uri = buffer_recv.substr(request.method.size() + SPACE,
-		   					found - (request.method.size() + SPACE));
-	if (!is_valid_uri(request.uri)) {
-		response.status = 400;
-		state = ROUTE;
+		_update_stat(ROUTE | ERROR | CLOSED, 400);
 		return ;
 	}
+	request.uri = buffer_recv.substr(request.method.size() + spaces,
+		   					found - (request.method.size() + spaces));
+	if (!is_valid_uri(request.uri)) {
+		_update_stat(ROUTE | ERROR | CLOSED, 400);
+		return ;
+	}
+	while (buffer_recv[request.method.size() +
+			request.uri.size() + spaces] == ' ' )
+		++spaces;
 	found = buffer_recv.find(version, request.method.size() + request.uri.size() +
-							SPACE * 2);
+							spaces);
 	if ((found == std::string::npos) ||
 		/* doest minor version is a digit ? */
 		!isdigit(buffer_recv[found + version.size()]) ||
-		buffer_recv.compare(found + version.size() + SPACE, 
-		request.delim.size(), request.delim)) {
-		response.status = 400;
-		state = ROUTE;
+		buffer_recv.compare(found + version.size() + DIGIT,
+		request.delim.size(), request.delim)) 
+	{
+		_update_stat(ROUTE | ERROR | CLOSED, 400);
 		return;
 	}
 	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
@@ -355,8 +365,7 @@ void Socket_client::process_headers()
 			}
 			else
 			{
-				response.status = 400;
-				state = ROUTE;
+				_update_stat(ROUTE | ERROR | CLOSED, 400);
 				return;
 			}
 		}
@@ -376,8 +385,7 @@ void Socket_client::process_headers()
 		{
 			/* Host duplicate */
 			if (!request.host.empty()) {
-				response.status = 400;
-				state = ROUTE;
+				_update_stat(ROUTE | ERROR | CLOSED, 400);
 				return;
 			}
 			request.host = val;
@@ -386,15 +394,13 @@ void Socket_client::process_headers()
 		{
 			/* Content-length duplicate */
 			if (request.content_length != -1) {
-				response.status = 400;
-				state = ROUTE;
+				_update_stat(ROUTE | ERROR | CLOSED, 400);
 				return;
 			}
 			try {request.content_length = std::stoi(val); }
 			catch (std::exception & e)
 			{
-				response.status = 400;
-				state = ROUTE;
+				_update_stat(ROUTE | ERROR | CLOSED, 400);
 				return;
 			}
 		}
@@ -403,16 +409,14 @@ void Socket_client::process_headers()
 			/* Transfer-encoding duplicate */
 			if (request.headers.find(key) != request.headers.end())
 			{
-				response.status = 400;
-				state = ROUTE;
+				_update_stat(ROUTE | ERROR | CLOSED, 400);
 				return;
 			}
 			if (val == "chunked")
 				request.chunked = true;
 			else 
 			{
-				response.status = 400;
-				state = ROUTE;
+				_update_stat(ROUTE | ERROR | CLOSED, 501);
 				return;
 			}
 		}
@@ -469,20 +473,17 @@ bool Socket_client::get_ckunked_body() {
 void Socket_client::process_body() {
 	if (!(request.method == "POST" || request.method == "PUT")) {
 		state = RESPONSE;
-		state |= SETUP_CGI;
 		return;
 	}
 	if (!request.chunked) {
 		if (get_simple_body()) {
 			state = RESPONSE;
-			state |= SETUP_CGI;
 			return;
 		}
 	} else {
 		try {
 			if (get_ckunked_body()) {
 				state =  RESPONSE;
-				state |= SETUP_CGI;
 				return ;
 			}
 		} catch(std::logic_error const & e) {
@@ -494,14 +495,14 @@ void Socket_client::process_body() {
 			#endif
 			response.status = 400;
 			state = RESPONSE;
-			state |= SETUP_CGI;
+			state |= (CLOSED | ERROR);
 			return ;
 		}
 	}
 	if (!response.status && request.content_length > std::stol(route.max_body_size)) {
-		response.status = 403;
+		response.status = 413;
 		state = RESPONSE;
-		state |= SETUP_CGI;
+		state |= (CLOSED | ERROR);
 		return;
 	}	
 	state = BODY;
@@ -534,25 +535,30 @@ void Socket_client::prepare_response() {
 
 	route.what();
 	
-	if (response.status == 400 || response.status == 501) {
+	if (response.status & CLOSED) {
 		state = RESPONSE;
 		return ;
 	}
 
 	// limit_except
-	if (route.limit_except.size() && find(route.limit_except.begin(), route.limit_except.end(), request.method) == route.limit_except.end()) {
-		response.status = 405;
-	}
 	state = BODY;
 }
 
 void Socket_client::process_response() {
-	_process_cgi();
-	return ;
-	// Check if response status is != 0
-	//
-	if (response.status != 0)
-		_process_error_page();
+
+	if (state & ERROR)
+	{
+		if (route.error_page.find(to_string(response.status)) != route.error_page.end())
+			route = server->choose_route(route.error_page[to_string(response.status)]);
+		else
+			response.body = default_pages[response.status];
+	}
+	if (route.limit_except.size() && find(route.limit_except.begin(),
+		route.limit_except.end(), request.method) == route.limit_except.end())
+	{
+		state |= ERROR;
+		response.status = 405;
+	}
 	else if (!route.return_.first.empty())
 		_process_return();
 	else if (!route.upload.empty())
@@ -561,8 +567,6 @@ void Socket_client::process_response() {
 		_process_cgi();
 	else
 		_process_normal();
-	// cgi
-	// get folder or file ou error_file(when response.status == 400 501 405 ...)
 }
 
 void Socket_client::_process_cgi() {

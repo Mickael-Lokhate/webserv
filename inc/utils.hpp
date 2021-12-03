@@ -74,6 +74,8 @@ typedef enum http_state {
 	READY = 256,
 	WAIT_CGI = 512,
 	READY_CGI = 1024,
+	ERROR = 2048,
+	CLOSED = 5096,
 } e_http_state;
 
 std::string _ltrim(const std::string &s);
