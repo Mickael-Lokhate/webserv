@@ -179,9 +179,24 @@ Route	Server::_find_default_route(std::string const & ext)
 {
 	std::vector<Route>::iterator it = routes.begin();
 	std::vector<Route>::iterator ite = routes.end();
+
+	while (it != ite)
+	{
+		if (!it->location.empty() && !it->location.compare("/") && !it->ext.compare(ext))
+			return *it;
+		it++;
+	}
+	it = routes.begin();
 	while (it != ite)
 	{
 		if (it->location.empty() && !it->ext.compare(ext))
+			return *it;
+		it++;
+	}
+	it = routes.begin();
+	while (it != ite)
+	{
+		if (!it->location.empty() && !it->location.compare("/"))
 			return *it;
 		it++;
 	}
