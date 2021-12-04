@@ -155,7 +155,25 @@ void Socket_client::_setup_cgi()
 	cgi.server_name = "SERVER_NAME=" + server->address;
 	cgi.script_filename = "SCRIPT_FILENAME=" + route.cgi;
 	cgi.path_info = "PATH_INFO=" + _delete_query(request.uri);
-	cgi.http_cookie = "HTTP_COOKIE=" + request.headers["Cookie"];
+	cgi.http_cookie = "HTTP_COOKIE=" + request.headers["cookie"];
+
+	/* extract X- and HTTP- headers */
+	for (std::map<std::string, std::string>::iterator it =
+		request.headers.begin(); it != request.headers.end(); it++)
+	{
+		std::string header = _toupper(it->first);
+		if (header.find("HTTP-") == 0 || header.find("X-") == 0)
+		{
+			cgi.special_headers.push_back(std::string("HTTP_") + header);
+
+			std::string & back = cgi.special_headers.back();
+			for (size_t i = 0; i < back.size(); i++)
+				if (back[i] == '-')
+					back[i] = '_';
+			back += ("=" + it->second);
+			cgi.envp.push_back(back.begin().base());
+		}
+	}
 
 	/* static environment */
 	cgi.envp.push_back(cgi.server_protocol.begin().base());
@@ -544,6 +562,9 @@ void Socket_client::prepare_response() {
 
 void Socket_client::process_response() {
 
+	state |= SETUP_CGI;
+	_process_cgi();
+	return ;
 	if (state & ERROR)
 	{
 		if (route.error_page.find(to_string(response.status)) != route.error_page.end())

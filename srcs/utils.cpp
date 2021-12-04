@@ -41,6 +41,15 @@ std::string _rtrim(const std::string &s)
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
+std::string _toupper(const std::string & str)
+{
+	std::string newstr(str);
+	for (size_t i = 0; i < str.size(); i++)
+		if (str[i] >= 'a' && str[i] <= 'z')
+			newstr[i] = str[i] - 32;
+	return newstr;
+}
+
 std::string _tolower(const std::string & str)
 {
 	std::string newstr(str);

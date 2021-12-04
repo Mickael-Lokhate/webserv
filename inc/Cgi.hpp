@@ -29,6 +29,7 @@ class Cgi {
 		std::string					script_filename;
 		std::string					path_info;
 		std::string					http_cookie;
+		std::vector<std::string>	special_headers;
 
 		pid_t						pid;
 		int							input[2];
