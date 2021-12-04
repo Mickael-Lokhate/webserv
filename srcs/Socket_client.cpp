@@ -87,7 +87,7 @@ void Socket_client::big_what(void) const
    	std::cout << "port : {" << port << "}\n";
 	std::cout << "buffer_recv : {" << buffer_recv << "}\n";
 	std::cout << "buffer_send : {" << buffer_send << "}\n";
-	std::cout << "state : {" << state << "}\n";
+	what_state();
 	request.what();
 	response.what();
 	route.what();
