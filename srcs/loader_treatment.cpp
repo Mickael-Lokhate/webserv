@@ -110,20 +110,14 @@ void	Loader::_treat_max_body_size(t_vector_string split_line, unsigned int line,
 
 void	Loader::_treat_return(t_vector_string split_line, unsigned int line, Route &default_route)
 {
-	if (split_line.size() < 2 || split_line.size() > 3)
+	if (split_line.size() != 3)
 		SYNTAX_ERROR(line, split_line.at(0));
-	if (split_line.size() == 2)
-	{
-		default_route.return_.first = "";
-		default_route.return_.second = split_line.at(1);
-	}
-	else
-	{
-		if (!is_number(split_line.at(1)))
-			SYNTAX_ERROR(line, split_line.at(0));
-		default_route.return_.first = split_line.at(1);
-		default_route.return_.second = split_line.at(2);
-	}
+	if (!is_number(split_line.at(1)) || (to_number<int>(split_line.at(1)) < 300 || to_number<int>(split_line.at(1)) > 399))
+		SYNTAX_ERROR(line, split_line.at(0));
+	if (split_line.at(2)[0] != '/')
+		SYNTAX_ERROR(line, split_line.at(0));
+	default_route.return_.first = split_line.at(1);
+	default_route.return_.second = split_line.at(2);
 }
 
 void	Loader::_treat_index(t_vector_string split_line, unsigned int line, Route &default_route)
