@@ -155,15 +155,16 @@ void Socket_client::_setup_cgi()
 	cgi.server_name = "SERVER_NAME=" + server->address;
 	cgi.script_filename = "SCRIPT_FILENAME=" + route.cgi;
 	cgi.path_info = "PATH_INFO=" + _delete_query(request.uri);
+	cgi.http_cookie = "HTTP_COOKIE=" + request.headers["Cookie"];
 
-	cgi.envp.push_back(cgi.path.begin().base());
-	cgi.envp.push_back(cgi.pwd.begin().base());
 	/* static environment */
 	cgi.envp.push_back(cgi.server_protocol.begin().base());
 	cgi.envp.push_back(cgi.request_scheme.begin().base());
 	cgi.envp.push_back(cgi.gateway_interface.begin().base());
 	cgi.envp.push_back(cgi.server_software.begin().base());
 	/* ------------------ */
+	cgi.envp.push_back(cgi.path.begin().base());
+	cgi.envp.push_back(cgi.pwd.begin().base());
 	cgi.envp.push_back(cgi.query_string.begin().base());
 	cgi.envp.push_back(cgi.request_method.begin().base());
 	cgi.envp.push_back(cgi.content_type.begin().base());
@@ -176,6 +177,7 @@ void Socket_client::_setup_cgi()
 	cgi.envp.push_back(cgi.server_name.begin().base());
 	cgi.envp.push_back(cgi.script_filename.begin().base());
 	cgi.envp.push_back(cgi.path_info.begin().base());
+	cgi.envp.push_back(cgi.http_cookie.begin().base());
 	cgi.envp.push_back(NULL);
 }
 
