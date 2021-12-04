@@ -43,6 +43,38 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	return *this;
 }
 
+void Socket_client::what_state(void) const
+{
+	std::cout << "----- Socket_client's state : -----" << std::endl;
+	if (state & REQUEST_LINE)
+		std::cout << "REQUEST_LINE" << std::endl;
+	if (state & HEADERS)
+		std::cout << "HEADERS" << std::endl;
+	if (state & ROUTE)
+		std::cout << "ROUTE" << std::endl;
+	if (state & BODY)
+		std::cout << "BODY" << std::endl;
+	if (state & RESPONSE)
+		std::cout << "RESPONSE" << std::endl;
+	if (state & SETUP_CGI)
+		std::cout << "SETUP_CGI" << std::endl;
+	if (state & NEED_READ)
+		std::cout << "NEED_READ" << std::endl;
+	if (state & NEED_WRITE)
+		std::cout << "NEED_WRITE" << std::endl;
+	if (state & READY)
+		std::cout << "READY" << std::endl;
+	if (state & WAIT_CGI)
+		std::cout << "WAIT_CGI" << std::endl;
+	if (state & READY_CGI)
+		std::cout << "READY_CGI" << std::endl;
+	if (state & ERROR)
+		std::cout << "ERROR" << std::endl;
+	if (state & CLOSED)
+		std::cout << "CLOSED" << std::endl;
+	std::cout << "----- end state : -----" << std::endl;
+}
+
 void Socket_client::what(void) const
 {
 	std::cout << "[" << fd << "] - " << addr << ":" << port;
