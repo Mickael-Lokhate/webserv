@@ -216,6 +216,8 @@ void	Loader::_get_location_name(t_vector_string  &split_line, unsigned int line,
 		SYNTAX_ERROR(line, split_line.at(0));
 	if (split_line.size() == 3 && (split_line.at(2).compare("{") != 0))
 		SYNTAX_ERROR(line, split_line.at(0));
+	if (split_line.at(1)[0] != '/' && split_line.at(1)[0] != '.')
+		SYNTAX_ERROR(line, split_line.at(0));
 	if (split_line.at(1).find(".") != std::string::npos)
 	{
 		split_line = split(split_line.at(1), '.');
