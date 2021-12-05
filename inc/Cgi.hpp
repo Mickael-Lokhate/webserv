@@ -32,6 +32,8 @@ class Cgi {
 		pid_t						pid;
 		int							input[2];
 		int							output[2];
+		int							exit_code;
+		bool						end;
 		std::vector<char *>			envp;
 
 		Cgi(void);

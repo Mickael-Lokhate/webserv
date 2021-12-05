@@ -13,6 +13,7 @@
 #define SPACE 1
 #define COLON 1
 #define CRLF "\r\n"
+#define SIZE_BUFF 0x2000
 
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);
@@ -68,15 +69,19 @@ typedef enum http_state {
 	ROUTE = 4,
 	BODY = 8,
 	RESPONSE = 16,
-	SETUP_CGI = 32,
-	NEED_READ = 64,
-	NEED_WRITE = 128,
-	READY = 256,
-	WAIT_CGI = 512,
-	READY_CGI = 1024,
-	ERROR = 2048,
-	CLOSED = 5096,
+	NEED_READ = 32,
+	NEED_WRITE = 64,
+	ERROR = 128,
+	READY = 512,
 } e_http_state;
+
+typedef enum http_action {
+	ACTION_CGI = 1,
+	ACTION_UPLOAD = 2,
+	ACTION_NORMAL = 4,
+	ACTION_RETURN = 8,
+} e_http_action;
+
 
 std::string _ltrim(const std::string &s);
 std::string _rtrim(const std::string &s);

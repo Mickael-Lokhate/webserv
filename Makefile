@@ -7,7 +7,7 @@ CXXFLAGS	= -I./inc -std=c++98 -Wall -Wextra -g -D DEBUG # -Werror
 all			: $(NAME)
 
 $(NAME)		: $(OBJ) 
-			$(CXX) $(FLAGS) -o $@ $^
+			$(CXX) $(CXXFLAGS) -o $@ $^
 
 clean		:
 			rm -rf $(SRC:.cpp=.o)
