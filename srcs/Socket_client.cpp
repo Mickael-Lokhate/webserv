@@ -599,6 +599,66 @@ void Socket_client::process_body_response()
 
 void Socket_client::process_header_response()
 {
+	char			buf[100];
+	struct timeval	now;
+
+	if (action != ACTION_CGI)
+	{
+		/* status line */
+		buffer_send.append("HTTP/1.1 " + to_string(response.status) +
+				+ " " + status_msgs[response.status] + CRLF);
+		/* common headers */
+		buffer_send.append(std::string("Connection:") +
+				(closed ? "closed" : "keep-alive") + CRLF);
+
+		buffer_send.append(std::string("Content-Type:") +
+				response.content_type + CRLF);
+		buffer_send.append(std::string("Server:") +
+				"webserv/v0.1" + CRLF);
+		if (gettimeofday(&now, NULL) == -1)
+			throw std::runtime_error(strerror(errno));
+		if (!strftime(buf, 100, "%D %T", gmtime(&now.tv_sec)))
+			throw std::runtime_error("strftime");
+		buffer_send.append(std::string("Date:") + buf + CRLF);
+		if (response.chunked)
+			buffer_send.append(std::string("Transfer-Encoding:") +
+					"chunked" + CRLF);
+		else 
+			buffer_send.append(std::string("Content-Length:") +
+					to_string(response.content_length) + CRLF);
+		if (action == ACTION_RETURN)
+			buffer_send.append(std::string("Location:") +
+					response.location + CRLF);
+		/* custom headers */
+		for (std::map<std::string, std::string>::iterator it =
+			response.headers.begin(); it != response.headers.end(); it++)
+			buffer_send.append(it->first + ":" + it->second + CRLF);
+		buffer_send.append(CRLF);
+	}
+	else 
+	{
+		size_t found = response.body.find("\n\n");
+		if (found == std::string::npos)
+			buffer_send.append(std::string("HTTP/1.1") +
+					" 502 " + status_msgs[502] + CRLF);
+		/* if no content-length nor content-type, 502 */
+		else if (response.body.find("Content-Type", found) == std::string::npos &&
+				(response.body.find("Content-Length", found) == std::string::npos))
+			buffer_send.append(std::string("HTTP/1.1") +
+					" 502 " + status_msgs[502] + CRLF);
+		else 
+			buffer_send.append(std::string("HTTP/1.1") +
+					" 200 " + status_msgs[200] + CRLF);
+		buffer_send.append(std::string("Transfer-Encoding:") + "chunked" + CRLF);
+		buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
+		if (gettimeofday(&now, NULL) == -1)
+			throw std::runtime_error(strerror(errno));
+		if (!strftime(buf, 100, "%D %T", gmtime(&now.tv_sec)))
+			throw std::runtime_error("strftime");
+		buffer_send.append(std::string("Date: ") + buf + CRLF);
+		buffer_send.append(std::string("Connection: keep-alive") + CRLF);
+		response.body.erase(0, found);
+	}
 }
 
 bool Socket_client::fetch_response(size_t size_pipe, ssize_t *size_send)
