@@ -116,14 +116,13 @@ void Worker::send_client(int i)
 	std::cout << ", " << client.buffer_send.size() << " bytes to send, ";
 	std::cout << _event_list[i].data << " bytes in pipe";
 	std::cout << "\n";
-	client.request.what();
 	#endif
 	bool end = client.fetch_response((size_t)_event_list[i].data, &size_send);
 	size_send = write(client.fd, client.buffer_send.c_str(), size_send);
 	if (size_send == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
 	if ((size_t)size_send < client.buffer_send.size())
-		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT);
+		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT | EV_CLEAR);
 	if (!end)
 	{
 		update_modif_list(client.fd, EVFILT_TIMER,
@@ -141,11 +140,10 @@ void Worker::send_client(int i)
 			client.response = Response();
 			client.cgi = Cgi();
 			client.route = Route();
-			update_modif_list(client.fd, EVFILT_WRITE, EV_DELETE);
 			/* Setup client's timeout for sending back data */
 			update_modif_list(client.fd, EVFILT_TIMER,
 					EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
-			std::cout << "{" << client.buffer_recv << "}\n";
+			//std::cout << "{" << client.buffer_recv << "}\n";
 			if (!client.buffer_recv.empty()) 
 				process_client(client.fd);
 		}
@@ -188,7 +186,6 @@ void Worker::read_client(int i)
 	{
 		if (nb_read <= SIZE_BUFF)
 		{
-			update_modif_list(client.fd_read, EVFILT_READ, EV_DELETE);
 			close(client.fd_read);
 			client.response.read_end = true;
 			client.state = READY;
@@ -198,7 +195,6 @@ void Worker::read_client(int i)
 	else if (_event_list[i].flags & EV_EOF)
 	{
 		// TODO EOF sans fflags
-		update_modif_list(client.fd_read, EVFILT_READ, EV_DELETE);
 		close(client.fd_read);
 		waitpid(client.cgi.pid, &client.cgi.exit_code, WNOHANG);	
 		client.response.read_end = true;
@@ -234,7 +230,6 @@ void Worker::write_client(int i)
 	}
 	else 
 	{
-		update_modif_list(client.fd_write, EVFILT_WRITE, EV_DELETE);
 		client.state &= ~NEED_WRITE;
 		client.request.body.clear();
 		close(client.fd_write);
@@ -257,13 +252,13 @@ void Worker::process_client(int fd_client)
 	#endif 
 	if (!(client.state & RESPONSE) && !(client.state & READY)) 
 	{
-		if (client.state == REQUEST_LINE)
+		if (client.state & REQUEST_LINE)
 			client.process_request_line();
-		if (client.state == HEADERS)
+		if (client.state & HEADERS)
 			client.process_headers();
-		if (client.state == ROUTE)
+		if (client.state & ROUTE)
 		    client.prepare_response();
-		if (client.state == BODY) 
+		if (client.state & BODY) 
 		{
 			update_modif_list(client.fd, EVFILT_TIMER,
 				EV_ADD, NOTE_SECONDS, TO_BODY);
@@ -288,7 +283,7 @@ void Worker::process_client(int fd_client)
 					0, 0,(void *)((long)client.fd));
 	}
 	if(client.state == READY)
-		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT);
+		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT | EV_CLEAR);
 }
 
 void Worker::event_loop(void)
@@ -307,7 +302,9 @@ void Worker::event_loop(void)
 			throw std::runtime_error(std::string(strerror(errno)));
 		_modif_list.resize(0);
 		_closed_clients.clear();
+#ifdef DEBUG
 		std::cout << "-----\n" ;
+#endif
 		for (int i = 0; i < number_of_events; i++)
 		{
 			try 

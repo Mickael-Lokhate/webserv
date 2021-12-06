@@ -323,9 +323,11 @@ const std::string & Socket_client::check_method() {
 
 void Socket_client::_update_stat(int _state, short _status)
 {
-	state = _state;
+	static short closed_status[] = {400, 501, 413};
+	static const int size = (sizeof(closed_status)/sizeof(short));
 	response.status = _status;
-	closed = (response.status > 399 && response.status < 600) ? true : false;
+	state = _state;
+	closed = std::find(closed_status, closed_status + size, response.status) != (closed_status + size);
 }
 
 /* request-line   = method SP request-target SP HTTP-version CRLF */
@@ -569,12 +571,14 @@ void Socket_client::prepare_response() {
 		route = (socket_server->servers[0])->choose_route("");
 		server = socket_server->servers[0]; 
 	}
-
+#ifdef DEBUG1
 	route.what();
-	// server->what();
+	server->what();
+#endif
 	
 	if (closed) {
 		state = RESPONSE;
+		state |= ERROR;
 		return ;
 	}
 	state = BODY;
@@ -633,8 +637,10 @@ void Socket_client::process_response() {
 		_process_cgi();
 	else
 		_process_normal();
+#ifdef DEBUG1
 	std::cout << "--RESPONSE--" << std::endl;
 	response.what();
+#endif
 }
 
 void Socket_client::process_body_response()
