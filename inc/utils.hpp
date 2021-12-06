@@ -85,6 +85,7 @@ typedef enum http_action {
 
 std::string _ltrim(const std::string &s);
 std::string _rtrim(const std::string &s);
+std::string _toupper(const std::string & str);
 std::string _tolower(const std::string & str);
 ssize_t _hexstr_to_int(std::string const & hexstr);
 std::string  _statetostr(e_http_state st);
