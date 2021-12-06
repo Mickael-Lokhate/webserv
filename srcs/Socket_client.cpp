@@ -749,8 +749,6 @@ void Socket_client::_process_upload()
 void Socket_client::_process_normal()
 {
 	std::string path = request.uri;
-	//if (*(path.end() - 1) != '/')
-	//	path.push_back('/');
 	if (!route.root.first.empty())
 	{
 		if (route.root.second)
@@ -758,8 +756,6 @@ void Socket_client::_process_normal()
 		else
 			path.insert(0, route.root.first);
 	}
-	if (path.at(0) == '/')
-		path.insert(0, ".");
 	if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
 	{
 		if (_is_dir(path.c_str()))
@@ -776,6 +772,7 @@ void Socket_client::_process_normal()
 						if (!(state & ERROR))
 							response.status = 200;
 						response.content_length = _get_file_size(fd_read);
+						// response.content_type = _get_file_type(tmp_path);
 						if (request.method.compare("GET") == 0)
 							state |= NEED_READ;
 						else
@@ -783,21 +780,28 @@ void Socket_client::_process_normal()
 						return ;
 					}
 				}
-				if (route.autoindex.compare("on") == 0)
+				// a tester la difference entre CA
+				if (route.autoindex.compare("on") == 0) {
 					generate_directory_listing();
+					return ;
+				}
 				return _set_error(404);
 			}
-			if (route.autoindex.compare("on") == 0)
+			// ET CA
+			if (route.autoindex.compare("on") == 0) {
 				generate_directory_listing();
+				return ;
+			}
 			return _set_error(403);
 		}
 		else
 		{
 			if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
 			{
-				if (!response.status)
+				if (!(state & ERROR))
 					response.status = 200;
 				response.content_length = _get_file_size(fd_read);
+				// response.content_type = _get_file_type(tmp_path);
 				if (request.method.compare("GET") == 0)
 					state |= NEED_READ;
 				else
