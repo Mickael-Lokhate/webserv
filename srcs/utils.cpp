@@ -41,6 +41,15 @@ std::string _rtrim(const std::string &s)
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
+std::string _toupper(const std::string & str)
+{
+	std::string newstr(str);
+	for (size_t i = 0; i < str.size(); i++)
+		if (str[i] >= 'a' && str[i] <= 'z')
+			newstr[i] = str[i] - 32;
+	return newstr;
+}
+
 std::string _tolower(const std::string & str)
 {
 	std::string newstr(str);
@@ -60,15 +69,12 @@ ssize_t _hexstr_to_int(std::string const & hexstr) {
 	return s;
 }
 
-std::string  _statetostr(e_http_state st) {
-	switch (st) {
-		case HEADERS:
-			return "HEADERS";
-		case BODY:
-			return "BODY";
-		case RESPONSE:
-			return "RESPONSE";
-		default:
-			return "ERROR";
-	}
+std::string _int_to_hexstr(int nb) {
+	std::string s;
+	std::stringstream ss;
+	ss << nb;
+	ss >> std::hex >> s;
+	return s;
 }
+
+

@@ -36,6 +36,9 @@ void	TesterServer::add_route(void)
 	Route defaultpy;
 	defaultpy.location = "";
 	defaultpy.ext = "py";
+	Route defaultslash;
+	defaultslash.location = "/";
+	defaultslash.ext = "";
 	Route directory;
 	directory.location = "/directory";
 	Route directoryDuplica;
@@ -52,11 +55,13 @@ void	TesterServer::add_route(void)
 	directorybla.location = "/directory";
 	directorybla.ext = "bla";
 	try {
-		server.add_route(directorybla);
-		_assert_same(0);
 		server.add_route(defaultphp);
 		_assert_same(0);
 		server.add_route(defaultpy);
+		_assert_same(0);
+		server.add_route(defaultslash);
+		_assert_same(0);
+		server.add_route(directorybla);
 		_assert_same(0);
 		server.add_route(directory);
 		_assert_same(0);
@@ -132,15 +137,6 @@ void	TesterServer::choose_route(void)
 		std::cout << "[" << route.ext << "]" << std::endl << "[" << expectedext << "]" << std::endl;
 	#endif
 
-	expectedloc = "";
-	expectedext = "";
-	route = server.choose_route("/");
-	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
-	#ifdef DEBUG
-		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
-		std::cout << "[" << route.ext << "]" << std::endl << "[" << expectedext << "]" << std::endl;
-	#endif
-
 	expectedloc = "/directory";
 	expectedext = "bla";
 	route = server.choose_route("/directory/test.bla");
@@ -153,6 +149,15 @@ void	TesterServer::choose_route(void)
 	expectedloc = "/directory";
 	expectedext = "";
 	route = server.choose_route("/directory");
+	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
+	#ifdef DEBUG
+		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
+		std::cout << "[" << route.ext << "]" << std::endl << "[" << expectedext << "]" << std::endl;
+	#endif
+
+	expectedloc = "/";
+	expectedext = "";
+	route = server.choose_route("/");
 	_assert_same(route.location.compare(expectedloc) || route.ext.compare(expectedext));
 	#ifdef DEBUG
 		std::cout << "[" << route.location << "]" << std::endl << "[" << expectedloc << "]" << std::endl;
@@ -180,6 +185,7 @@ void TesterServer::delete_uri_variable(void)
 		std::cout << "[" << loctest << "]" << std::endl << "[" << expected << "]" << std::endl;
 	#endif
 }
+
 void TesterServer::remove_simple_dot(void)
 {
 	std::string expected = "/example/sousdoc/////../../%4F/%20/%42/example2";
@@ -199,6 +205,7 @@ void TesterServer::remove_simple_dot(void)
 		std::cout << "[" << loctest << "]" << std::endl << "[" << expected << "]" << std::endl;
 	#endif
 }
+
 void TesterServer::format_double_dot(void)
 {
 	std::string expected = "/example/sousdoc///%4F/%20/%42/example2";
@@ -241,6 +248,7 @@ void TesterServer::format_double_dot(void)
 		std::cout << "[" << loctest << "]" << std::endl << "[" << expected << "]" << std::endl;
 	#endif
 }
+
 void TesterServer::decode_uri(void)
 {
 	std::string expected = "/example/sousdoc///O/ /B/example2";
@@ -263,6 +271,7 @@ void TesterServer::decode_uri(void)
 	#endif
 
 }
+
 void TesterServer::delete_duplicate_slash(void)
 {
 	std::string expected = "/example/sousdoc/O/ /B/example2";

@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include "utils.hpp"
 #include "Request.hpp"
@@ -32,6 +33,8 @@ class Socket_client {
 	int				fd_read;
 	int 			fd_write;
 	Server			* server;
+	int				action;
+	bool			closed;
 
 	Socket_client(int fd = -1, const std::string & addr = "no_adr", 
 						const std::string & port = "no_port", 
@@ -57,7 +60,11 @@ class Socket_client {
 	bool get_ckunked_body(void);
 	bool get_simple_body(void);
 	void what(void) const;
+	void what_state(void) const;
 	void big_what(void) const;
+	bool fetch_response(size_t size_pipe, ssize_t *size_send);
+	void process_header_response();
+	void process_body_response();
 
 	private:
 
@@ -72,4 +79,5 @@ class Socket_client {
 	void _set_error(short code);
 	size_t  _get_file_size(int fd);
 	bool	_is_dir(const char* path);
+	void _set_action();
 };
