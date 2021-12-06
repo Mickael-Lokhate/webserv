@@ -12,6 +12,7 @@ Route::Route()
 	index.push_back("index.php");
 	cgi = "";
 	upload = "";
+	is_root_set = false;
 }
 
 Route::~Route()
