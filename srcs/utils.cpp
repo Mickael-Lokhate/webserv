@@ -60,15 +60,12 @@ ssize_t _hexstr_to_int(std::string const & hexstr) {
 	return s;
 }
 
-std::string  _statetostr(e_http_state st) {
-	switch (st) {
-		case HEADERS:
-			return "HEADERS";
-		case BODY:
-			return "BODY";
-		case RESPONSE:
-			return "RESPONSE";
-		default:
-			return "ERROR";
-	}
+std::string _int_to_hexstr(int nb) {
+	std::string s;
+	std::stringstream ss;
+	ss << nb;
+	ss >> std::hex >> s;
+	return s;
 }
+
+

@@ -595,6 +595,8 @@ void Socket_client::process_response() {
 
 void Socket_client::process_body_response()
 {
+	buffer_send.append(response.body);
+	response.body.clear();
 }
 
 void Socket_client::process_header_response()
@@ -603,12 +605,13 @@ void Socket_client::process_header_response()
 
 bool Socket_client::fetch_response(size_t size_pipe, ssize_t *size_send)
 {
-	if (!response.h_send) {
+	if (!response.head_send) {
 			process_header_response();
-			response.h_send = true;
-	}
+			response.head_send = true;
+	}	
 	process_body_response();
-	return true;
+	*size_send = std::min(buffer_send.size(), size_pipe);
+	return response.read_end;
 }
 
 void Socket_client::_process_cgi() {
@@ -616,7 +619,6 @@ void Socket_client::_process_cgi() {
 	_exec_cgi();
 	state |= NEED_WRITE;
 	state |= NEED_READ;
-//	state |= WAIT_CGI;
 }
 
 void Socket_client::_process_return()

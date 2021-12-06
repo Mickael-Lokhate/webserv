@@ -190,6 +190,7 @@ void Worker::read_client(int i)
 		{
 			update_modif_list(client.fd_read, EVFILT_READ, EV_DELETE);
 			close(client.fd_read);
+			client.response.read_end = true;
 			client.state = READY;
 			process_client(client.fd);
 		}
@@ -200,7 +201,7 @@ void Worker::read_client(int i)
 		update_modif_list(client.fd_read, EVFILT_READ, EV_DELETE);
 		close(client.fd_read);
 		waitpid(client.cgi.pid, &client.cgi.exit_code, WNOHANG);	
-		client.cgi.end = true;
+		client.response.read_end = true;
 		client.state = READY;
 		process_client(client.fd);
 	}
