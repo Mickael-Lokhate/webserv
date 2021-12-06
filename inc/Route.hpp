@@ -19,6 +19,7 @@ public:
 	std::vector<std::string> index;
 	std::string cgi;
 	std::string upload;
+	bool		is_root_set;
 
 public:
 	Route();

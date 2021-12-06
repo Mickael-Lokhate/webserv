@@ -77,6 +77,8 @@ void	Loader::_treat_server_name(t_vector_string split_line, unsigned int line, S
 
 void	Loader::_treat_root(t_vector_string split_line, unsigned int line, Route &default_route)
 {
+	if (default_route.is_root_set)
+		SYNTAX_ERROR(line, split_line.at(0));
 	if (split_line.size() < 2 || split_line.size() > 3)
 		SYNTAX_ERROR(line, split_line.at(0));
 	if (split_line.size() == 2 && split_line.at(1).compare("alias") == 0)
@@ -89,6 +91,7 @@ void	Loader::_treat_root(t_vector_string split_line, unsigned int line, Route &d
 		else
 			SYNTAX_ERROR(line, split_line.at(0));
 	}
+	default_route.is_root_set = true;
 }
 void	Loader::_treat_autoindex(t_vector_string split_line, unsigned int line, Route &default_route)
 {
@@ -237,4 +240,5 @@ void	Loader::_get_location_name(t_vector_string  &split_line, unsigned int line,
 	}
 	else
 		default_route.location = split_line.at(1);
+	default_route.is_root_set = false;
 }
