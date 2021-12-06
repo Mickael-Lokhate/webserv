@@ -190,6 +190,8 @@ void	Loader::_treat_error_page(t_vector_string split_line, unsigned int line, Ro
 	{
 		if (!is_number(split_line.at(i)) || (to_number<int>(split_line.at(i)) < 400 || to_number<int>(split_line.at(i)) > 599))
 			SYNTAX_ERROR(line, split_line.at(0));
+		if ((default_route.error_page.find(split_line.at(i))) != default_route.error_page.end())
+			SYNTAX_ERROR(line, split_line.at(0));
 		default_route.error_page.insert(std::make_pair(split_line.at(i), split_line.at(split_line.size() - 1)));
 	}
 }

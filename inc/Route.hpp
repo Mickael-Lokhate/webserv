@@ -25,6 +25,4 @@ public:
 	~Route();
 	void what() const;
 
-private:
-	void init_error_page(void);
 };
