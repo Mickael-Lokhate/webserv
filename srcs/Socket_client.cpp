@@ -749,8 +749,8 @@ void Socket_client::_process_upload()
 void Socket_client::_process_normal()
 {
 	std::string path = request.uri;
-	if (*(path.end() - 1) != '/')
-		path.push_back('/');
+	//if (*(path.end() - 1) != '/')
+	//	path.push_back('/');
 	if (!route.root.first.empty())
 	{
 		if (route.root.second)

@@ -7,7 +7,6 @@ Route::Route()
 	autoindex = "off";
 	max_body_size = "1000000";
 	location = "";
-	init_error_page();
 	ext = "";
 	index.push_back("index.html");
 	index.push_back("index.php");
@@ -18,17 +17,6 @@ Route::Route()
 Route::~Route()
 {
 	;
-}
-
-void Route::init_error_page(void)
-{
-	error_page.insert(std::pair<std::string, std::string>("403", "error/403.html"));
-	error_page.insert(std::pair<std::string, std::string>("404", "error/404.html"));
-	error_page.insert(std::pair<std::string, std::string>("500", "error/50x.html"));
-	error_page.insert(std::pair<std::string, std::string>("501", "error/501.html"));
-	error_page.insert(std::pair<std::string, std::string>("502", "error/50x.html"));
-	error_page.insert(std::pair<std::string, std::string>("503", "error/50x.html"));
-	error_page.insert(std::pair<std::string, std::string>("504", "error/50x.html"));
 }
 
 void Route::what() const
