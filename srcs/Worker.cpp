@@ -118,16 +118,17 @@ void Worker::send_client(int i)
 	std::cout << "\n";
 	client.request.what();
 	#endif
-	bool end = client.fetch_response((size_t)_event_list[i].data);
-	size_send = write(client.fd, client.buffer_send.c_str(),
-			client.buffer_send.size());
+	bool end = client.fetch_response((size_t)_event_list[i].data, &size_send);
+	size_send = write(client.fd, client.buffer_send.c_str(), size_send);
 	if (size_send == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
-	client.buffer_send.clear();
+	if (size_send < client.buffer_send.size())
+		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT);
 	if (!end)
 	{
 		update_modif_list(client.fd, EVFILT_TIMER,
 			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);
+		client.buffer_send.erase(0, size_send);
 	}
 	else 
 	{

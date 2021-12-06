@@ -593,8 +593,21 @@ void Socket_client::process_response() {
 	response.what();
 }
 
-bool Socket_client::fetch_response(size_t size_pipe)
+void Socket_client::process_body_response()
 {
+}
+
+void Socket_client::process_header_response()
+{
+}
+
+bool Socket_client::fetch_response(size_t size_pipe, ssize_t *size_send)
+{
+	if (!response.h_send) {
+			process_header_response();
+			response.h_send = true;
+	}
+	process_body_response();
 	return true;
 }
 
