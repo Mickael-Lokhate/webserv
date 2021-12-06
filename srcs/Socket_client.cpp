@@ -541,6 +541,7 @@ void Socket_client::_set_error(short code)
 	if (state & ERROR) {
 		response.body = default_pages[code];
 		state = READY;
+		response.read_end = true;
 		response.status = code;
 	}
 	else {
