@@ -60,6 +60,7 @@ class Socket_client {
 	bool get_ckunked_body(void);
 	bool get_simple_body(void);
 	void what(void) const;
+	void what_state(void) const;
 	void big_what(void) const;
 	bool fetch_response(size_t size_pipe, ssize_t *size_send);
 	void process_header_response();

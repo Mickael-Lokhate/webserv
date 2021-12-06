@@ -2,7 +2,7 @@ NAME = TesterServer
 
 CXX = clang++
 
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address -I ../inc
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -g -I ../inc
 
 SRCS = test.cpp TesterServer.cpp ../srcs/Server.cpp \
 		../srcs/Route.cpp ../srcs/utils.cpp
