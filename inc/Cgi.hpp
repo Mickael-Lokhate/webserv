@@ -28,10 +28,14 @@ class Cgi {
 		std::string					server_name;
 		std::string					script_filename;
 		std::string					path_info;
+		std::string					http_cookie;
+		std::vector<std::string>	special_headers;
 
 		pid_t						pid;
 		int							input[2];
 		int							output[2];
+		int							exit_code;
+		bool						end;
 		std::vector<char *>			envp;
 
 		Cgi(void);

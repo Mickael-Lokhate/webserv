@@ -18,6 +18,8 @@ class Response {
 	std::string							content_type;
 	bool								chunked;
 	std::string							location;
+	bool								head_send;
+	bool								read_end;
 
 	Response();
 	Response(const Response & ref);
