@@ -68,11 +68,12 @@ void Worker::new_client(int i)
 		update_modif_list(new_client, EVFILT_TIMER,
 			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
 		update_modif_list(new_client, EVFILT_READ, EV_ADD);
-		char buffer[INET_ADDRSTRLEN];
 		/* Store client's addr and port as string */
+		char		buffer[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &(from.sin_addr), buffer, INET_ADDRSTRLEN);
+		uint16_t 	port = htons(from.sin_port);
 		Socket_client client = Socket_client(new_client, buffer,
-						std::to_string(htons(from.sin_port)), 
+						to_string(port), 
 						&(_socket_servers.find(_event_list[i].ident)->second));
 		_socket_clients.insert(std::make_pair(new_client, client));
 
@@ -348,9 +349,9 @@ void Worker::event_loop(void)
 				std::cerr << "Worker::event_loop: " << e.what() << std::endl;
 			}
 		}
-		/* ajouter les fichiers ainsi que les pipes */
-		_event_list.resize(_socket_clients.size() +
-							+ _modif_list.size() + _socket_servers.size());
+		/* We have at least one event registered per client and at most four
+		 * for CGI cases, we setup event_list to receive at most three times
+		 * socket_client size, the up average */
+		_event_list.resize(_socket_clients.size() * 3 + _socket_servers.size());
 	}
-
 }

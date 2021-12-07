@@ -120,7 +120,7 @@ void Socket_client::generate_directory_listing(void)
 	response.body.append(sep);
 	while ((dp = readdir(d)) != NULL)
 	{
-		if (!strftime(buf, 100, "%D %T", gmtime(&inf.st_mtimespec.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&inf.st_mtimespec.tv_sec)))
 			throw std::runtime_error("strftime");
 		std::string file = path + "/" + dp->d_name;
 		if (stat(file.c_str(), &inf) == -1)
@@ -131,8 +131,7 @@ void Socket_client::generate_directory_listing(void)
 					/* Last-modified */
 					"<td align=\"right\">" + buf + "</td>" +
 					/* Size */
-					"<td align=\"right\">" + std::to_string(inf.st_size) +
-					"</td></tr>\r\n");
+					"<td align=\"right\">" + to_string(inf.st_size) + "</td></tr>\r\n");
 	}
 	response.body.append(sep);
 	response.body.append(bot);
@@ -179,7 +178,7 @@ void Socket_client::_setup_cgi()
 	cgi.remote_addr = "REMOTE_ADDR=" + addr;
 	cgi.remote_port = "REMOTE_PORT=" + port;
 	cgi.server_port = "SERVER_PORT=" + server->port;
-	cgi.server_name = "SERVER_NAME=" + server->address;
+	cgi.server_name = "SERVER_NAME=" + server->server_name[0];
 	cgi.script_filename = "SCRIPT_FILENAME=" + route.cgi;
 	cgi.path_info = "PATH_INFO=" + _delete_query(request.uri);
 	cgi.http_cookie = "HTTP_COOKIE=" + request.headers["cookie"];
@@ -443,11 +442,18 @@ void Socket_client::process_headers()
 		else if (key == "content-length")
 		{
 			/* Content-length duplicate */
-			if (request.content_length != -1) {
+			if (request.content_length != -1 && 
+				request.method != "GET") 
+			{
 				_update_stat(ROUTE | ERROR, 400);
 				return;
 			}
-			try {request.content_length = std::stoi(val); }
+			try 
+			{
+				request.content_length = _extract_content_length(val); 
+				if (request.content_length < 0)
+					throw std::invalid_argument("invalid content length");
+			}
 			catch (std::exception & e)
 			{
 				_update_stat(ROUTE | ERROR, 400);
@@ -548,7 +554,7 @@ void Socket_client::process_body() {
 			return ;
 		}
 	}
-	if (!response.status && request.content_length > std::stol(route.max_body_size)) {
+	if (!response.status && request.content_length > _stol(route.max_body_size)) {
 		state = RESPONSE;
 		_update_stat(ERROR, 413);
 		return;
@@ -669,31 +675,31 @@ void Socket_client::process_header_response()
 		buffer_send.append("HTTP/1.1 " + to_string(response.status) +
 				+ " " + status_msgs[response.status] + CRLF);
 		/* common headers */
-		buffer_send.append(std::string("Connection:") +
+		buffer_send.append(std::string("Connection: ") +
 				(closed ? "closed" : "keep-alive") + CRLF);
 
-		buffer_send.append(std::string("Content-Type:") +
+		buffer_send.append(std::string("Content-Type: ") +
 				response.content_type + CRLF);
-		buffer_send.append(std::string("Server:") +
+		buffer_send.append(std::string("Server: ") +
 				"webserv/v0.1" + CRLF);
 		if (gettimeofday(&now, NULL) == -1)
 			throw std::runtime_error(strerror(errno));
-		if (!strftime(buf, 100, "%D %T", gmtime(&now.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&now.tv_sec)))
 			throw std::runtime_error("strftime");
-		buffer_send.append(std::string("Date:") + buf + CRLF);
+		buffer_send.append(std::string("Date: ") + buf + CRLF);
 		if (response.chunked)
 			buffer_send.append(std::string("Transfer-Encoding:") +
 					"chunked" + CRLF);
 		else 
-			buffer_send.append(std::string("Content-Length:") +
+			buffer_send.append(std::string("Content-Length: ") +
 					to_string(response.content_length) + CRLF);
 		if (action == ACTION_RETURN)
-			buffer_send.append(std::string("Location:") +
+			buffer_send.append(std::string("Location: ") +
 					response.location + CRLF);
 		/* custom headers */
 		for (std::map<std::string, std::string>::iterator it =
 			response.headers.begin(); it != response.headers.end(); it++)
-			buffer_send.append(it->first + ":" + it->second + CRLF);
+			buffer_send.append(it->first + ": " + it->second + CRLF);
 		buffer_send.append(CRLF);
 	}
 	else 
@@ -710,11 +716,11 @@ void Socket_client::process_header_response()
 		else 
 			buffer_send.append(std::string("HTTP/1.1") +
 					" 200 " + status_msgs[200] + CRLF);
-		buffer_send.append(std::string("Transfer-Encoding:") + "chunked" + CRLF);
+		buffer_send.append(std::string("Transfer-Encoding: ") + "chunked" + CRLF);
 		buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
 		if (gettimeofday(&now, NULL) == -1)
 			throw std::runtime_error(strerror(errno));
-		if (!strftime(buf, 100, "%D %T", gmtime(&now.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&now.tv_sec)))
 			throw std::runtime_error("strftime");
 		buffer_send.append(std::string("Date: ") + buf + CRLF);
 		buffer_send.append(std::string("Connection: keep-alive") + CRLF);
