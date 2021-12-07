@@ -1,5 +1,40 @@
 #include "utils.hpp"
 
+long _stol(const std::string & str)
+{
+	bool		sign = false;
+	long long 	result = 0;
+
+	for (std::string::const_iterator it = str.begin();
+		it != str.end(); it++)
+	{
+		if (!isdigit(*it))
+		{
+			if (*it == '-')
+			{
+				if (it != str.begin() || str.size() == 1)
+					throw std::invalid_argument("stol: invalid number");
+				else
+					sign = true;
+			}
+			else if (*it == '+')
+			{
+				if (it != str.begin() || str.size() == 1)
+					throw std::invalid_argument("stol: invalid number");
+			}
+			else if (*it == '.' && it != str.begin())
+				return (sign ? -1 * result : result);
+			else
+				throw std::invalid_argument("stol: invalid number");
+		}
+		else
+			result = result * 10 + (*it - '0');
+		if (result > LONG_MAX || result < LONG_MIN)
+			throw std::out_of_range("stol: out of range number");
+	}
+	return (sign ? -1 * result : result);
+}
+
 bool	is_number(const std::string& s)
 {
 	for (std::string::const_iterator it = s.begin(); it != s.end(); ++it)

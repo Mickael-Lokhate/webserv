@@ -90,6 +90,7 @@ std::string _tolower(const std::string & str);
 ssize_t _hexstr_to_int(std::string const & hexstr);
 std::string  _statetostr(e_http_state st);
 std::string _int_to_hexstr(int nb);
+long		_stol(const std::string & str);
 
 void add_status_msgs();
 void add_default_pages();
