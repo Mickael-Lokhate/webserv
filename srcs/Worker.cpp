@@ -348,8 +348,9 @@ void Worker::event_loop(void)
 				std::cerr << "Worker::event_loop: " << e.what() << std::endl;
 			}
 		}
-		/* ajouter les fichiers ainsi que les pipes */
-		_event_list.resize(_socket_clients.size() +
-							+ _modif_list.size() + _socket_servers.size());
+		/* We have at least one event registered per client and at most four
+		 * for CGI cases, we setup event_list to receive at most three times
+		 * socket_client size, the up average */
+		_event_list.resize(_socket_clients.size() * 3 + _socket_servers.size());
 	}
 }

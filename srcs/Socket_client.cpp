@@ -442,7 +442,9 @@ void Socket_client::process_headers()
 		else if (key == "content-length")
 		{
 			/* Content-length duplicate */
-			if (request.content_length != -1) {
+			if (request.content_length != -1 && 
+				request.method != "GET") 
+			{
 				_update_stat(ROUTE | ERROR, 400);
 				return;
 			}
