@@ -94,3 +94,5 @@ long		_stol(const std::string & str);
 
 void add_status_msgs();
 void add_default_pages();
+void add_mime_types();
+std::string _get_file_mime(std::string const & tmp_path);

@@ -463,7 +463,7 @@ void Socket_client::process_headers()
 		else if (key == "transfer-encoding")
 		{
 			/* Transfer-encoding duplicate */
-			if (request.headers.find(key) != request.headers.end())
+			if (request.chunked)
 			{
 				_update_stat(ROUTE | ERROR, 400);
 				return;
@@ -594,6 +594,8 @@ void Socket_client::_set_error(short code)
 		response.body = default_pages[code];
 		state = READY;
 		response.read_end = true;
+		response.content_length = response.body.size();
+		response.content_type = "text/html";
 		response.status = code;
 	}
 	else {
@@ -800,7 +802,7 @@ void Socket_client::_process_normal()
 						if (!(state & ERROR))
 							response.status = 200;
 						response.content_length = _get_file_size(fd_read);
-						// response.content_type = _get_file_type(tmp_path);
+						response.content_type = _get_file_mime(tmp_path);
 						if (request.method.compare("GET") == 0)
 							state |= NEED_READ;
 						else
@@ -829,7 +831,7 @@ void Socket_client::_process_normal()
 				if (!(state & ERROR))
 					response.status = 200;
 				response.content_length = _get_file_size(fd_read);
-				// response.content_type = _get_file_type(tmp_path);
+				response.content_type = _get_file_mime(path);
 				if (request.method.compare("GET") == 0)
 					state |= NEED_READ;
 				else
