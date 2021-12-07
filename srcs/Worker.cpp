@@ -122,15 +122,14 @@ void Worker::send_client(int i)
 	size_send = write(client.fd, client.buffer_send.c_str(), size_send);
 	if (size_send == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
-	if ((size_t)size_send < client.buffer_send.size())
-		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT | EV_CLEAR);
-	if (client.response.read_end)
-	{
-		update_modif_list(client.fd, EVFILT_TIMER,
+	update_modif_list(client.fd, EVFILT_TIMER,
 			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);
+	if ((size_t)size_send < client.buffer_send.size())
+	{
 		client.buffer_send.erase(0, size_send);
+		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT | EV_CLEAR);
 	}
-	else 
+	if (client.buffer_send.empty() && client.response.read_end)
 	{
 		if (client.closed)
 			del_client(i);
@@ -185,12 +184,13 @@ void Worker::read_client(int i)
 	client.response.body.append(buffer, nb_read);
 	if (client.action != ACTION_CGI)
 	{
-		if (nb_read <= SIZE_BUFF)
+		if (nb_read == _event_list[i].data)
 		{
 			close(client.fd_read);
 			client.response.read_end = true;
 			client.state = READY;
 			process_client(client.fd);
+			return ;
 		}
 	}
 	else if (_event_list[i].flags & EV_EOF)
@@ -201,8 +201,10 @@ void Worker::read_client(int i)
 		client.response.read_end = true;
 		client.state = READY;
 		process_client(client.fd);
+		return ;
 	}
-	else if (nb_read >= SIZE_BUFF)
+	
+	if (nb_read >= SIZE_BUFF)
 	{
 		client.state = READY;
 		process_client(client.fd);
