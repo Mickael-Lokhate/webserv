@@ -100,7 +100,7 @@ bool Socket_client::is_valid_uri(std::string const & str) {
 
 void Socket_client::generate_directory_listing(void)
 {
-	std::string					path = request.uri;
+	std::string					path = route.root.first + request.uri;
 	DIR *						d = opendir(path.c_str());
 	struct dirent * 			dp;
 	struct stat					inf;
@@ -114,8 +114,8 @@ void Socket_client::generate_directory_listing(void)
 	if (!d)
 		throw std::runtime_error(strerror(errno));
 	response.body.append(top);
-	response.body.append("Index of " + path + "</title>\r\n\t</head>\r\n\t<body>\r\n\t" +
-				"<h1>Index of " + path + "</h1>\r\n\t<table>\r\n");
+	response.body.append("Index of " + request.uri + "</title>\r\n\t</head>\r\n\t<body>\r\n\t" +
+				"<h1>Index of " + request.uri + "</h1>\r\n\t<table>\r\n");
 	response.body.append(col);
 	response.body.append(sep);
 	while ((dp = readdir(d)) != NULL)
@@ -136,6 +136,8 @@ void Socket_client::generate_directory_listing(void)
 	response.body.append(sep);
 	response.body.append(bot);
 	closedir(d);
+	state = READY;
+	response.status = 200;
 }
 
 static void _abort(void)
@@ -748,7 +750,12 @@ void Socket_client::fetch_response()
 
 void Socket_client::_process_cgi() {
 	_setup_cgi();
-	_exec_cgi();
+	try { _exec_cgi(); }
+	catch (...) 
+	{
+		_set_error(500);
+		return ;
+	}
 	state |= NEED_WRITE;
 	state |= NEED_READ;
 }
@@ -809,15 +816,18 @@ void Socket_client::_process_normal()
 					}
 				}
 				// a tester la difference entre CA
-				if (route.autoindex.compare("on") == 0) {
-					generate_directory_listing();
+				if (route.autoindex.compare("on") == 0) 
+				{
+					try { generate_directory_listing(); }
+					catch (...) { _set_error(500); }
 					return ;
 				}
 				return _set_error(404);
 			}
 			// ET CA
 			if (route.autoindex.compare("on") == 0) {
-				generate_directory_listing();
+				try { generate_directory_listing(); }
+				catch (...) { _set_error(500); }
 				return ;
 			}
 			return _set_error(403);
