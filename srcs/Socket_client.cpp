@@ -549,14 +549,12 @@ void Socket_client::process_body() {
 			std::cout << "rest : {" << buffer_recv << "}\n" ;
 			std::cout << e.what() << "\n";
 			#endif
-			state = RESPONSE;
-			_update_stat(ERROR, 400);
+			_update_stat(RESPONSE | ERROR, 400);
 			return ;
 		}
 	}
 	if (!response.status && request.content_length > _stol(route.max_body_size)) {
-		state = RESPONSE;
-		_update_stat(ERROR, 413);
+		_update_stat(RESPONSE | ERROR, 413);
 		return;
 	}	
 	state = BODY;
