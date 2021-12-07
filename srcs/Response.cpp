@@ -5,7 +5,8 @@ Response::~Response() {
 
 Response::Response() : 
 	status(0),
-	content_length(-1),
+	content_length(0),
+	content_type("text/plain"),
 	chunked(false)
 {
 }

@@ -11,6 +11,7 @@ void Master::init() {
 
 	add_status_msgs();
 	add_default_pages();
+	add_mime_types();
 
 	// choose file
 	if (_file_conf.empty())

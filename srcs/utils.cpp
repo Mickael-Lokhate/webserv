@@ -1,5 +1,7 @@
 #include "utils.hpp"
 
+extern std::map<std::string, std::string> mime_types;
+
 long _extract_content_length(const std::string & str)
 {
 	long long 	result = 0;
@@ -126,6 +128,26 @@ std::string _size_to_hexstr(size_t size) {
 	ss << std::hex << size;
 	ss >> s;
 	return s;
+}
+
+std::string _get_file_mime(std::string const & tmp_path) {
+	std::string ext;
+	std::string tmp;
+	try {
+	size_t pos = tmp_path.rfind("/");
+		if (pos != std::string::npos) {
+			tmp = tmp_path.substr(pos, tmp_path.size() - pos);
+			pos = tmp.rfind(".");
+			if (pos != std::string::npos)
+				ext = tmp.substr( pos + 1, tmp.size());
+		}
+	}catch (std::exception & e) {
+
+	}
+	ext = mime_types[ext];
+	if (ext.empty())
+		ext = "text/plain";
+	return ext; 
 }
 
 
