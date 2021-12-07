@@ -178,7 +178,7 @@ void Socket_client::_setup_cgi()
 	cgi.remote_addr = "REMOTE_ADDR=" + addr;
 	cgi.remote_port = "REMOTE_PORT=" + port;
 	cgi.server_port = "SERVER_PORT=" + server->port;
-	cgi.server_name = "SERVER_NAME=" + server->address;
+	cgi.server_name = "SERVER_NAME=" + server->server_name[0];
 	cgi.script_filename = "SCRIPT_FILENAME=" + route.cgi;
 	cgi.path_info = "PATH_INFO=" + _delete_query(request.uri);
 	cgi.http_cookie = "HTTP_COOKIE=" + request.headers["cookie"];
