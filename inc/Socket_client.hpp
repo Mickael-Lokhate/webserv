@@ -62,7 +62,7 @@ class Socket_client {
 	void what(void) const;
 	void what_state(void) const;
 	void big_what(void) const;
-	bool fetch_response(size_t size_pipe, ssize_t *size_send);
+	void fetch_response();
 	void process_header_response();
 	void process_body_response();
 

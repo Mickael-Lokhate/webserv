@@ -117,7 +117,6 @@ void Worker::send_client(int i)
 	std::cout << _event_list[i].data << " bytes in pipe";
 	std::cout << "\n";
 	#endif
-	bool end = client.fetch_response((size_t)_event_list[i].data, &size_send);
 	size_send = write(client.fd, client.buffer_send.c_str(), size_send);
 	if (size_send == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
@@ -282,8 +281,10 @@ void Worker::process_client(int fd_client)
 			update_modif_list(client.fd_write, EVFILT_WRITE, EV_ADD,
 					0, 0,(void *)((long)client.fd));
 	}
-	if(client.state == READY)
+	if(client.state == READY) {
+		client.fetch_response();
 		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT | EV_CLEAR);
+	}
 }
 
 void Worker::event_loop(void)

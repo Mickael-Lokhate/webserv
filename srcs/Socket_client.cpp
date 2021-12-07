@@ -645,8 +645,17 @@ void Socket_client::process_response() {
 
 void Socket_client::process_body_response()
 {
-	buffer_send.append(response.body);
-	response.body.clear();
+	if (response.chunked)
+		while(response.body.size())
+		{
+			if(response.body.size() >= 8184)
+				buffer_recv.append("1ff8\r\n");
+				buffer_recv.append(response.body.substr(0, ));
+				buffer_recv.append("\r\n");
+		}
+	else
+		buffer_send.append(response.body);
+		response.body.clear();
 }
 
 void Socket_client::process_header_response()
@@ -713,15 +722,13 @@ void Socket_client::process_header_response()
 	}
 }
 
-bool Socket_client::fetch_response(size_t size_pipe, ssize_t *size_send)
+void Socket_client::fetch_response()
 {
 	if (!response.head_send) {
-			process_header_response();
-			response.head_send = true;
-	}	
+		process_header_response();
+		response.head_send = true;
+	}
 	process_body_response();
-	*size_send = std::min(buffer_send.size(), size_pipe);
-	return response.read_end;
 }
 
 void Socket_client::_process_cgi() {
