@@ -118,12 +118,13 @@ void Worker::send_client(int i)
 	std::cout << _event_list[i].data << " bytes in pipe";
 	std::cout << "\n";
 	#endif
+	size_send = std::min(std::min((size_t)_event_list[i].data, (size_t)SIZE_BUFF), client.buffer_send.size());
 	size_send = write(client.fd, client.buffer_send.c_str(), size_send);
 	if (size_send == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
 	if ((size_t)size_send < client.buffer_send.size())
 		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT | EV_CLEAR);
-	if (!end)
+	if (client.response.read_end)
 	{
 		update_modif_list(client.fd, EVFILT_TIMER,
 			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);

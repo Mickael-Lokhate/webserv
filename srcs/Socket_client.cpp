@@ -501,7 +501,7 @@ bool Socket_client::get_ckunked_body() {
 		if ((pos_delim = buffer_recv.find(request.delim, cursor)) == std::string::npos) 
 			break;
 		// taille
-		size_chunck = _hexstr_to_int(buffer_recv.substr(cursor, pos_delim));
+		size_chunck = _hexstr_to_ssize(buffer_recv.substr(cursor, pos_delim));
 		if (size_chunck < 0)
 			throw std::logic_error("error chunked : hexa size");
 		if (pos_delim + request.delim.size() + size_chunck + request.delim.size() > buffer_recv.size())
@@ -651,17 +651,26 @@ void Socket_client::process_response() {
 
 void Socket_client::process_body_response()
 {
-	if (response.chunked)
+	std::string size_str;
+	size_t	size_chunked;
+	const int SIZE_CH = 8184;
+
+	std::cout << _size_to_hexstr((size_t)SIZE_CH) << "\n";
+
+	if (response.chunked) {
 		while(response.body.size())
 		{
-			if(response.body.size() >= 8184)
-				buffer_recv.append("1ff8\r\n");
-				buffer_recv.append(response.body.substr(0, ));
-				buffer_recv.append("\r\n");
+			size_chunked = (response.body.size() >= SIZE_CH) ? SIZE_CH : response.body.size();
+			buffer_recv.append(_size_to_hexstr(size_chunked) + CRLF);
+			buffer_recv.append(response.body.substr(0, size_chunked));
+			buffer_recv.append(CRLF);
+			response.body.erase(0, size_chunked);
 		}
-	else
+	}
+	else {
 		buffer_send.append(response.body);
 		response.body.clear();
+	}
 }
 
 void Socket_client::process_header_response()

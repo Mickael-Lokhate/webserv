@@ -110,7 +110,7 @@ std::string _tolower(const std::string & str)
 	return newstr;
 }
 
-ssize_t _hexstr_to_int(std::string const & hexstr) {
+ssize_t _hexstr_to_ssize(std::string const & hexstr) {
 	size_t s;   
 	if (!isxdigit(hexstr[0]))
 		return -1;
@@ -120,11 +120,11 @@ ssize_t _hexstr_to_int(std::string const & hexstr) {
 	return s;
 }
 
-std::string _int_to_hexstr(int nb) {
+std::string _size_to_hexstr(size_t size) {
 	std::string s;
 	std::stringstream ss;
-	ss << nb;
-	ss >> std::hex >> s;
+	ss << std::hex << size;
+	ss >> s;
 	return s;
 }
 
