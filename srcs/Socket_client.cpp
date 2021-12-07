@@ -711,7 +711,7 @@ void Socket_client::process_header_response()
 		buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
 		if (gettimeofday(&now, NULL) == -1)
 			throw std::runtime_error(strerror(errno));
-		if (!strftime(buf, 100, "%D %T GMT", gmtime(&now.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&now.tv_sec)))
 			throw std::runtime_error("strftime");
 		buffer_send.append(std::string("Date: ") + buf + CRLF);
 		buffer_send.append(std::string("Connection: keep-alive") + CRLF);
