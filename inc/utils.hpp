@@ -83,6 +83,7 @@ typedef enum http_action {
 } e_http_action;
 
 
+long		_extract_content_length(const std::string & str);
 std::string _ltrim(const std::string &s);
 std::string _rtrim(const std::string &s);
 std::string _toupper(const std::string & str);

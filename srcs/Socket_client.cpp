@@ -448,7 +448,12 @@ void Socket_client::process_headers()
 				_update_stat(ROUTE | ERROR, 400);
 				return;
 			}
-			try {request.content_length = std::stoi(val); }
+			try 
+			{
+				request.content_length = _extract_content_length(val); 
+				if (request.content_length < 0)
+					throw std::invalid_argument("invalid content length");
+			}
 			catch (std::exception & e)
 			{
 				_update_stat(ROUTE | ERROR, 400);

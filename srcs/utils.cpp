@@ -1,5 +1,21 @@
 #include "utils.hpp"
 
+long _extract_content_length(const std::string & str)
+{
+	long long 	result = 0;
+
+	for (std::string::const_iterator it = str.begin();
+		it != str.end(); it++)
+	{
+		if (!isdigit(*it))
+			throw std::invalid_argument("stol: invalid number");
+		result = result * 10 + (*it - '0');
+		if (result > LONG_MAX)
+			throw std::out_of_range("stol: out of range number");
+	}
+	return result;
+}
+
 long _stol(const std::string & str)
 {
 	bool		sign = false;
