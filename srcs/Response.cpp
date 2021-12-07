@@ -5,9 +5,14 @@ Response::~Response() {
 
 Response::Response() : 
 	status(0),
+	headers(),
+	body(""),
 	content_length(0),
 	content_type("text/plain"),
-	chunked(false)
+	chunked(false),
+	location(""),
+	head_send(false),
+	read_end(false)
 {
 }
 
@@ -22,6 +27,9 @@ Response & Response::operator=(const Response & ref) {
 	content_length = ref.content_length;
 	content_type = ref.content_type;
 	chunked = ref.chunked;
+	head_send = ref.head_send;
+	read_end = ref.read_end;
+	location = ref.location;
 	return *this;
 }
 
