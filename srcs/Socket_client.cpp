@@ -574,8 +574,8 @@ void Socket_client::prepare_response() {
 		it++;
 	}
 	if (it == socket_server->servers.end()) {
-		route = (socket_server->servers[0])->choose_route("");
 		server = socket_server->servers[0]; 
+		route = server->choose_route(request.uri);
 	}
 #ifdef DEBUG1
 	route.what();
@@ -655,22 +655,25 @@ void Socket_client::process_body_response()
 	size_t	size_chunked;
 	const int SIZE_CH = 8184;
 
-	std::cout << _size_to_hexstr((size_t)SIZE_CH) << "\n";
-
 	if (response.chunked) {
-		while(response.body.size())
-		{
-			size_chunked = (response.body.size() >= SIZE_CH) ? SIZE_CH : response.body.size();
-			buffer_recv.append(_size_to_hexstr(size_chunked) + CRLF);
-			buffer_recv.append(response.body.substr(0, size_chunked));
-			buffer_recv.append(CRLF);
+		while(response.body.size()) {
+			if (!response.head_send)
+				size_chunked = std::min(response.body.size(), (size_t)SIZE_CH - buffer_send.size());
+			else	
+				size_chunked = std::min(response.body.size(), (size_t)SIZE_CH);
+			buffer_send.append(_size_to_hexstr(size_chunked) + CRLF);
+			buffer_send.append(response.body.substr(0, size_chunked));
+			buffer_send.append(CRLF);
 			response.body.erase(0, size_chunked);
+			if (response.body.size() < SIZE_CH && !response.read_end)
+				break;
 		}
 	}
 	else {
 		buffer_send.append(response.body);
 		response.body.clear();
 	}
+	response.head_send = true;
 }
 
 void Socket_client::process_header_response()
@@ -741,7 +744,6 @@ void Socket_client::fetch_response()
 {
 	if (!response.head_send) {
 		process_header_response();
-		response.head_send = true;
 	}
 	process_body_response();
 }

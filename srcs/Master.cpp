@@ -23,6 +23,7 @@ void Master::init() {
 		loader.add_servers(_servers);
 	} catch (std::exception const & e) {
 		std::cerr << "Error : " << e.what() << "\n";
+		exit(0);
 	}
 
 	//create socket_srevers
