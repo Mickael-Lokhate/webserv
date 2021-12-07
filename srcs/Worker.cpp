@@ -125,9 +125,7 @@ void Worker::send_client(int i)
 	update_modif_list(client.fd, EVFILT_TIMER,
 			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);
 	if ((size_t)size_send < client.buffer_send.size())
-	{
 		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT | EV_CLEAR);
-	}
 	client.buffer_send.erase(0, size_send);
 	if (client.buffer_send.empty() && client.response.read_end)
 	{
