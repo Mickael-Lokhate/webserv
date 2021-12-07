@@ -769,10 +769,20 @@ void Socket_client::_process_return()
 
 void Socket_client::_process_upload()
 {
+	std::string file = route.upload + request.uri;
+
 	if (!_is_dir(route.upload.c_str())) {
 		return _set_error(500);
 	}
-	if ((fd_read = open(route.upload.c_str(), O_RDWR | O_CREAT | O_NONBLOCK)) != -1)
+	if ((fd_write = open(file.c_str(), O_WRONLY | O_TRUNC |
+										O_NONBLOCK)) != -1)
+	{
+		state = NEED_WRITE;
+		response.status = 204; // No content
+		return ;
+	}
+	else if ((fd_write = open(file.c_str(), O_WRONLY | O_CREAT |
+										O_NONBLOCK, 0755)) != -1)
 	{
 		state = NEED_WRITE;
 		response.status = 201; //created
