@@ -762,7 +762,11 @@ void Socket_client::_process_upload()
 	size_t		pos = request.uri.find_last_of("/");
 	std::string tmp_filename = request.uri.substr(pos, request.uri.size() - pos);
 	file += tmp_filename;
-
+	
+	if (request.content_length <= 0)
+		return _set_error(500);
+	if (_is_dir(file.c_str()))
+		return _set_error(409);
 	if (!_is_dir(route.upload.c_str())) 
 		return _set_error(500);
 	if ((fd_write = open(file.c_str(), O_WRONLY | O_TRUNC |
