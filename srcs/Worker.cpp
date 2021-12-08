@@ -236,6 +236,7 @@ void Worker::write_client(int i)
 		close(client.fd_write);
 		if(client.action != ACTION_CGI) {
 			client.state = READY;
+			client.response.read_end = true;
 			process_client(client.fd);
 		}
 	}

@@ -227,38 +227,6 @@ void Socket_client::_setup_cgi()
 	cgi.envp.push_back(NULL);
 }
 
-/*
- 
-   		  Le Worker écrit dans INPUT[1] et CGI lit dans INPUT[0]
-   		 Le Worker lit dans OUTPUT[0] et CGI écrit dans OUTPUT[1]
- 
- 
- 			                  ----------------
-
-
- 
-               input[1] <=> write_fs                    input[0]
-
-                +-+-------------------------------------+-+
-      +------>  | |            |---------->             | |  +------+
-      |         +-+-------------------------------------+-+         |
-      +                                                             v
-                         +----------------------+
-+----------+             |  Cgi {               |             +----------+
-|          |             |                      |             |          |
-|  Worker  |             |      int input[2];   |             |    Cgi   |
-|          |             |      int output[2];  |             |          |
-+----------+             |  };                  |             +----------+
-                         +----------------------+
-      ^                                                             +
-      |         +-+-------------------------------------+-+         |
-      +------+  | |            <----------|             | |  <------+
-                +-+-------------------------------------+-+
-
-            output[0] <=> read_fs                    output[1]
-
-*/
-
 void Socket_client::_prepare_pipes(void)
 {
 
@@ -773,23 +741,28 @@ void Socket_client::_process_upload()
 {
 	std::string file = route.upload + request.uri;
 
-	if (!_is_dir(route.upload.c_str())) {
+	if (!_is_dir(route.upload.c_str())) 
 		return _set_error(500);
-	}
 	if ((fd_write = open(file.c_str(), O_WRONLY | O_TRUNC |
 										O_NONBLOCK)) != -1)
 	{
 		state = NEED_WRITE;
-		response.status = 204; // No content
+		/* 204 No content */
+		response.status = 204; 
 		return ;
 	}
-	else if ((fd_write = open(file.c_str(), O_WRONLY | O_CREAT |
-										O_NONBLOCK, 0755)) != -1)
+	else if (errno == ENOENT && ((fd_write = open(file.c_str(),
+			O_WRONLY | O_CREAT | O_NONBLOCK, 0600)) != -1))
 	{
 		state = NEED_WRITE;
-		response.status = 201; //created
+		/* 201 Created */
+		response.status = 201; 
 		return ;
 	}
+	/*
+	 * We should check if we got an error on permission or a
+	 * system error which should be marked as error 500
+	 */
 	_set_error(403);
 }
 
