@@ -151,6 +151,9 @@ void Socket_client::generate_directory_listing(void)
 	closedir(d);
 	state = READY;
 	response.status = 200;
+	response.content_length = response.body.size();
+	response.content_type = "text/html";
+	response.read_end = true;
 }
 
 static void _abort(void)
@@ -866,6 +869,7 @@ void Socket_client::_process_normal()
 	else
 	{
 		response.status = 200;
+		response.read_end = true;
 		state = READY;
 	}
 }
