@@ -120,7 +120,7 @@ void Socket_client::generate_directory_listing(void)
 	response.body.append(sep);
 	while ((dp = readdir(d)) != NULL)
 	{
-		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&inf.st_mtimespec.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
 			throw std::runtime_error("strftime");
 		std::string file = path + "/" + dp->d_name;
 		if (stat(file.c_str(), &inf) == -1)
@@ -226,38 +226,6 @@ void Socket_client::_setup_cgi()
 	cgi.envp.push_back(cgi.http_cookie.begin().base());
 	cgi.envp.push_back(NULL);
 }
-
-/*
- 
-   		  Le Worker écrit dans INPUT[1] et CGI lit dans INPUT[0]
-   		 Le Worker lit dans OUTPUT[0] et CGI écrit dans OUTPUT[1]
- 
- 
- 			                  ----------------
-
-
- 
-               input[1] <=> write_fs                    input[0]
-
-                +-+-------------------------------------+-+
-      +------>  | |            |---------->             | |  +------+
-      |         +-+-------------------------------------+-+         |
-      +                                                             v
-                         +----------------------+
-+----------+             |  Cgi {               |             +----------+
-|          |             |                      |             |          |
-|  Worker  |             |      int input[2];   |             |    Cgi   |
-|          |             |      int output[2];  |             |          |
-+----------+             |  };                  |             +----------+
-                         +----------------------+
-      ^                                                             +
-      |         +-+-------------------------------------+-+         |
-      +------+  | |            <----------|             | |  <------+
-                +-+-------------------------------------+-+
-
-            output[0] <=> read_fs                    output[1]
-
-*/
 
 void Socket_client::_prepare_pipes(void)
 {
@@ -700,7 +668,7 @@ void Socket_client::process_header_response()
 				"webserv/v0.1" + CRLF);
 		if (gettimeofday(&now, NULL) == -1)
 			throw std::runtime_error(strerror(errno));
-		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&now.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
 			throw std::runtime_error("strftime");
 		buffer_send.append(std::string("Date: ") + buf + CRLF);
 		if (response.chunked)
@@ -737,7 +705,7 @@ void Socket_client::process_header_response()
 		buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
 		if (gettimeofday(&now, NULL) == -1)
 			throw std::runtime_error(strerror(errno));
-		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&now.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
 			throw std::runtime_error("strftime");
 		buffer_send.append(std::string("Date: ") + buf + CRLF);
 		buffer_send.append(std::string("Connection: keep-alive") + CRLF);
@@ -774,25 +742,33 @@ void Socket_client::_process_return()
 
 void Socket_client::_process_upload()
 {
-	std::string file = route.upload + request.uri;
+	std::string file = route.upload;
+	size_t		pos = request.uri.find_last_of("/");
+	std::string tmp_filename = request.uri.substr(pos, request.uri.size() - pos);
+	file += tmp_filename;
 
-	if (!_is_dir(route.upload.c_str())) {
+	if (!_is_dir(route.upload.c_str())) 
 		return _set_error(500);
-	}
 	if ((fd_write = open(file.c_str(), O_WRONLY | O_TRUNC |
 										O_NONBLOCK)) != -1)
 	{
 		state = NEED_WRITE;
-		response.status = 204; // No content
+		/* 204 No content */
+		response.status = 204; 
 		return ;
 	}
-	else if ((fd_write = open(file.c_str(), O_WRONLY | O_CREAT |
-										O_NONBLOCK, 0755)) != -1)
+	else if (errno == ENOENT && ((fd_write = open(file.c_str(),
+			O_WRONLY | O_CREAT | O_NONBLOCK, 0600)) != -1))
 	{
 		state = NEED_WRITE;
-		response.status = 201; //created
+		/* 201 Created */
+		response.status = 201; 
 		return ;
 	}
+	/*
+	 * We should check if we got an error on permission or a
+	 * system error which should be marked as error 500
+	 */
 	_set_error(403);
 }
 
