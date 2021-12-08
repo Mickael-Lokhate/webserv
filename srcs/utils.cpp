@@ -4,6 +4,10 @@ extern std::map<std::string, std::string> mime_types;
 
 int _remove(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
+	(void)sb;
+	(void)typeflag;
+	(void)ftwbuf;
+
 	return remove(fpath);
 }
 
