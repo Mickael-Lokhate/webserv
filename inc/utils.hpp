@@ -1,10 +1,13 @@
 #pragma once
+#include <ftw.h>
 #include <vector>
 #include <map>
 #include <string>
 #include <sstream>  
 #include <iostream>
 #include <exception>
+#include <unistd.h>
+#include <stdlib.h>
 
 #define STRDEBUG(MSG) std::string(__FUNCTION__) + " : " + MSG + " ("  + std::string(__FILE__) + ":" + std::to_string(__LINE__) + ")"
 
@@ -18,6 +21,7 @@
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);
 void						syntax_error(unsigned int line, const std::string &c);
+int _remove(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 
 template<class T>
 T	HexToInt(const std::string &str)

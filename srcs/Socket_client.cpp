@@ -775,9 +775,12 @@ void Socket_client::_process_normal()
 	if (!route.root.first.empty())
 	{
 		if (route.root.second)
-			path = route.root.first;
-		else
-			path.insert(0, route.root.first);
+		{
+			size_t pos = path.find(route.location);
+			if (pos != std::string::npos)
+				path.erase(pos, route.location.length());
+		}
+		path.insert(0, route.root.first);
 	}
 	if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
 	{
@@ -839,7 +842,23 @@ void Socket_client::_process_normal()
 	}
 	else if (request.method.compare("DELETE") == 0)
 	{
-		if (unlink(path.c_str()) == 0)
+		if (_is_dir(path.c_str()) && *(path.end() - 1) != '/')
+			return _set_error(409);
+		if (_is_dir(path.c_str()) && (path == route.root.first + "/"))
+		{	
+			//nftw((path).c_str(), _remove, 64, FTW_DEPTH | FTW_PHYS);
+			return _set_error(403);
+		}
+		if (!_is_dir(path.c_str()))
+		{
+			if (unlink(path.c_str()) == 0)
+			{
+				response.status = 204; // DELETE  OK but no more information to send
+				state = READY;
+				return ;
+			}
+		}
+		else if (nftw(path.c_str(), _remove, 20, FTW_DEPTH | FTW_PHYS) == 0)
 		{
 			response.status = 204; // DELETE  OK but no more information to send
 			state = READY;
@@ -853,7 +872,6 @@ void Socket_client::_process_normal()
 		state = READY;
 	}
 }
-
 
 size_t Socket_client::_get_file_size(int fd)
 {
