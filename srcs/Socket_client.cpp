@@ -22,6 +22,7 @@ Socket_client::Socket_client(const Socket_client & ref)
 	*this = ref;
 }
 
+
 Socket_client::~Socket_client(void)
 {
 	;
@@ -44,6 +45,18 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	action = ref.action;
 	closed = ref.closed;
 	return *this;
+}
+
+void Socket_client::clean(void)
+{
+	buffer_send.clear();
+	state = REQUEST_LINE;
+	request = Request();
+	response = Response();
+	cgi = Cgi();
+	route = Route();
+	fd_read = -1;
+	fd_write = -1;
 }
 
 void Socket_client::what_state(void) const
@@ -871,4 +884,4 @@ bool Socket_client::_is_dir(const char* path)
 	struct stat buf;
 	stat(path, &buf);
 	return S_ISDIR(buf.st_mode);
-}
+}	

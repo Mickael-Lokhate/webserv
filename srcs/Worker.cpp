@@ -112,7 +112,7 @@ void Worker::send_client(int i)
 	ssize_t			size_send;
 
 	#ifdef DEBUG
-	std::cout << "[Worker] - send client -> ";
+	std::cout << "[Worker] -   send client -> ";
 	client.what();
 	std::cout << ", " << client.buffer_send.size() << " bytes to send, ";
 	std::cout << _event_list[i].data << " bytes in pipe";
@@ -132,12 +132,7 @@ void Worker::send_client(int i)
 		if (client.closed)
 			del_client(i);
 		else {
-			client.buffer_send.clear();
-			client.state = REQUEST_LINE;
-			client.request = Request();
-			client.response = Response();
-			client.cgi = Cgi();
-			client.route = Route();
+			client.clean();
 			/* Setup client's timeout for sending back data */
 			update_modif_list(client.fd, EVFILT_TIMER,
 					EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
@@ -150,19 +145,22 @@ void Worker::send_client(int i)
 
 void Worker::del_client(int i)
 {
+	Socket_client & client = _socket_clients[_event_list[i].ident];
 #ifdef DEBUG
 	std::cout << "[Worker] -   " << 
-	((_event_list[i].filter == EVFILT_TIMER) ? "TO" : "fin") 
+	((_event_list[i].filter == EVFILT_TIMER) ? "TO" : "del") 
 	<< " client -> ";
 	_socket_clients.find(_event_list[i].ident)->second.what();
 	std::cout << "\n";
 #endif 
 	/* Delete timeout if it was not triggered */
 	if (_event_list[i].filter != EVFILT_TIMER)
-		update_modif_list(_event_list[i].ident, EVFILT_TIMER, EV_DELETE);
-	close(_event_list[i].ident);
-	_socket_clients.erase(_event_list[i].ident);
-	_closed_clients.insert(_event_list[i].ident);
+		update_modif_list(client.fd, EVFILT_TIMER, EV_DELETE);
+	close(client.fd_read);
+	close(client.fd_write);
+	close(client.fd);
+	_socket_clients.erase(client.fd);
+	_closed_clients.insert(client.fd);
 }
 
 void Worker::read_client(int i)
@@ -177,8 +175,9 @@ void Worker::read_client(int i)
 	char buffer[SIZE_BUFF];
 	int nb_read = read(client.fd_read, buffer, SIZE_BUFF);
 
-	if (nb_read == -1)
+	if (nb_read == -1) {
 		throw std::runtime_error(std::string(strerror(errno)));
+	}
 	client.response.body.append(buffer, nb_read);
 	if (client.action != ACTION_CGI)
 	{
@@ -213,8 +212,6 @@ void Worker::read_client(int i)
 void Worker::write_client(int i)
 {
 	Socket_client & client = _socket_clients[(long)_event_list[i].udata];
-	if (!(client.state & NEED_WRITE))
-		return;
 #ifdef DEBUG
 	std::cout << "[Worker] -   Write client -> ";
 	client.what();
