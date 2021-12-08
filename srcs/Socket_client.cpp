@@ -771,7 +771,10 @@ void Socket_client::_process_return()
 
 void Socket_client::_process_upload()
 {
-	std::string file = route.upload + request.uri;
+	std::string file = route.upload;
+	size_t		pos = request.uri.find_last_of("/");
+	std::string tmp_filename = request.uri.substr(pos, request.uri.size() - pos);
+	file += tmp_filename;
 
 	if (!_is_dir(route.upload.c_str())) {
 		return _set_error(500);
