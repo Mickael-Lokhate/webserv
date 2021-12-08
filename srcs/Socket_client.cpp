@@ -799,8 +799,10 @@ void Socket_client::_process_delete(std::string& path)
 	if (_is_dir(path.c_str()) && *(path.end() - 1) != '/')
 		return _set_error(409);
 	if (_is_dir(path.c_str()) && (path == route.root.first + "/"))
-	{	
-		//nftw((path).c_str(), _remove, 64, FTW_DEPTH | FTW_PHYS);
+	{
+		// Temporaire => Need delete all content in directory but not the directory
+		nftw((path).c_str(), _remove, 20, FTW_DEPTH | FTW_PHYS);
+		mkdir(path.c_str(), 0766);
 		return _set_error(403);
 	}
 	if (!_is_dir(path.c_str()))
