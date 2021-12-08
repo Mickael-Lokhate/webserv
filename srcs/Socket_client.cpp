@@ -658,7 +658,7 @@ void Socket_client::process_body_response()
 	const int SIZE_CH = 8184;
 
 	if (response.chunked) {
-		while(response.body.size()) {
+		while(!response.body.empty()) {
 			if (!response.head_send)
 				size_chunked = std::min(response.body.size(), (size_t)SIZE_CH - buffer_send.size());
 			else	
@@ -669,6 +669,8 @@ void Socket_client::process_body_response()
 			response.body.erase(0, size_chunked);
 			if (response.body.size() < SIZE_CH && !response.read_end)
 				break;
+			if (response.body.empty())
+				buffer_send.append(std::string(CRLF) + "0" + CRLF);
 		}
 	}
 	else {
@@ -731,6 +733,7 @@ void Socket_client::process_header_response()
 			buffer_send.append(std::string("HTTP/1.1") +
 					" 200 " + status_msgs[200] + CRLF);
 		buffer_send.append(std::string("Transfer-Encoding: ") + "chunked" + CRLF);
+		response.chunked = true;
 		buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
 		if (gettimeofday(&now, NULL) == -1)
 			throw std::runtime_error(strerror(errno));
