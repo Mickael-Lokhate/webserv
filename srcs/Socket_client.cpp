@@ -858,6 +858,8 @@ void Socket_client::_process_get_head(std::string& path)
 		if (!route.index.empty())
 			if (_test_all_index(path))
 				return ;
+		if (errno == EACCES)
+			return _set_error(403);
 		if (route.autoindex.compare("on") == 0) {
 			try { generate_directory_listing(); }
 			catch (...) { _set_error(500); }
@@ -869,6 +871,8 @@ void Socket_client::_process_get_head(std::string& path)
 	{
 		if (_open_file_fill_response(path))
 			return ;
+		if (errno == EACCES)
+			return _set_error(403);
 		return _set_error(404);
 	}
 }
