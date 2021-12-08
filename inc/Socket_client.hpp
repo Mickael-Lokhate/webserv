@@ -65,6 +65,7 @@ class Socket_client {
 	void fetch_response();
 	void process_header_response();
 	void process_body_response();
+	void clean(void);
 
 	private:
 

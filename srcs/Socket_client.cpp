@@ -22,6 +22,7 @@ Socket_client::Socket_client(const Socket_client & ref)
 	*this = ref;
 }
 
+
 Socket_client::~Socket_client(void)
 {
 	;
@@ -44,6 +45,18 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	action = ref.action;
 	closed = ref.closed;
 	return *this;
+}
+
+void Socket_client::clean(void)
+{
+	buffer_send.clear();
+	state = REQUEST_LINE;
+	request = Request();
+	response = Response();
+	cgi = Cgi();
+	route = Route();
+	fd_read = -1;
+	fd_write = -1;
 }
 
 void Socket_client::what_state(void) const
@@ -120,7 +133,7 @@ void Socket_client::generate_directory_listing(void)
 	response.body.append(sep);
 	while ((dp = readdir(d)) != NULL)
 	{
-		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&inf.st_mtimespec.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
 			throw std::runtime_error("strftime");
 		std::string file = path + "/" + dp->d_name;
 		if (stat(file.c_str(), &inf) == -1)
@@ -138,6 +151,9 @@ void Socket_client::generate_directory_listing(void)
 	closedir(d);
 	state = READY;
 	response.status = 200;
+	response.content_length = response.body.size();
+	response.content_type = "text/html";
+	response.read_end = true;
 }
 
 static void _abort(void)
@@ -626,7 +642,7 @@ void Socket_client::process_body_response()
 	const int SIZE_CH = 8184;
 
 	if (response.chunked) {
-		while(response.body.size()) {
+		while(!response.body.empty()) {
 			if (!response.head_send)
 				size_chunked = std::min(response.body.size(), (size_t)SIZE_CH - buffer_send.size());
 			else	
@@ -637,6 +653,8 @@ void Socket_client::process_body_response()
 			response.body.erase(0, size_chunked);
 			if (response.body.size() < SIZE_CH && !response.read_end)
 				break;
+			if (response.body.empty())
+				buffer_send.append(std::string(CRLF) + "0" + CRLF);
 		}
 	}
 	else {
@@ -666,7 +684,7 @@ void Socket_client::process_header_response()
 				"webserv/v0.1" + CRLF);
 		if (gettimeofday(&now, NULL) == -1)
 			throw std::runtime_error(strerror(errno));
-		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&now.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
 			throw std::runtime_error("strftime");
 		buffer_send.append(std::string("Date: ") + buf + CRLF);
 		if (response.chunked)
@@ -699,10 +717,11 @@ void Socket_client::process_header_response()
 			buffer_send.append(std::string("HTTP/1.1") +
 					" 200 " + status_msgs[200] + CRLF);
 		buffer_send.append(std::string("Transfer-Encoding: ") + "chunked" + CRLF);
+		response.chunked = true;
 		buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
 		if (gettimeofday(&now, NULL) == -1)
 			throw std::runtime_error(strerror(errno));
-		if (!strftime(buf, 100, "%a, %d %b %y %T %Z", gmtime(&now.tv_sec)))
+		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
 			throw std::runtime_error("strftime");
 		buffer_send.append(std::string("Date: ") + buf + CRLF);
 		buffer_send.append(std::string("Connection: keep-alive") + CRLF);
@@ -869,6 +888,7 @@ void Socket_client::_process_normal()
 	else
 	{
 		response.status = 200;
+		response.read_end = true;
 		state = READY;
 	}
 }
@@ -886,4 +906,4 @@ bool Socket_client::_is_dir(const char* path)
 	struct stat buf;
 	stat(path, &buf);
 	return S_ISDIR(buf.st_mode);
-}
+}	
