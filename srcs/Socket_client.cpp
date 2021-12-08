@@ -773,6 +773,8 @@ void Socket_client::_process_upload()
 		response.status = 204; 
 		return ;
 	}
+	else if (errno == EACCES)
+		return _set_error(500);
 	else if (errno == ENOENT && ((fd_write = open(file.c_str(),
 			O_WRONLY | O_CREAT | O_NONBLOCK, 0600)) != -1))
 	{
