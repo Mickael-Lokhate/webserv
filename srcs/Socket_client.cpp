@@ -105,9 +105,23 @@ void Socket_client::big_what(void) const
 	socket_server->big_what();
 }
 
-bool Socket_client::is_valid_uri(std::string const & str) {
-	if (str[0] != '/')
-		return false;
+bool Socket_client::is_valid_uri() {
+	size_t pos;
+	std::string host;
+	if ((request.uri.compare(0, 7, "http://") == 0) || (request.uri.compare(0, 8, "https://") == 0))
+	{
+		pos = request.uri.find("/");
+		request.uri.erase(0, pos + 2);
+		pos = request.uri.find("/");
+		host = request.uri.substr(0, pos);
+		if (host.empty())
+			return false;
+		request.uri.erase(0, host.size());
+		if (request.uri.empty())
+			request.uri = "/";
+		std::cout << host << "\n";
+		std::cout << request.uri << "\n";
+	}
 	return true;
 }
 
@@ -350,13 +364,13 @@ void Socket_client::process_request_line()
 	}
 	request.uri = buffer_recv.substr(request.method.size() + spaces,
 		   					found - (request.method.size() + spaces));
-	if (!is_valid_uri(request.uri)) {
-		_update_stat(ROUTE | ERROR, 400);
-		return ;
-	}
 	while (buffer_recv[request.method.size() +
 			request.uri.size() + spaces] == ' ' )
 		++spaces;
+	if (!is_valid_uri()) {
+		_update_stat(ROUTE | ERROR, 400);
+		return ;
+	}
 	found = buffer_recv.find(version, request.method.size() + request.uri.size() +
 							spaces);
 	if ((found == std::string::npos) ||

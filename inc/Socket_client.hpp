@@ -54,7 +54,7 @@ class Socket_client {
 
 	void generate_directory_listing(void);
 
-	bool is_valid_uri(std::string const & str);
+	bool is_valid_uri();
 	const std::string & check_method(void);
 
 	bool get_ckunked_body(void);
