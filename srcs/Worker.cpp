@@ -175,6 +175,7 @@ void Worker::read_client(int i)
 #endif 
 
 	char buffer[SIZE_BUFF];
+	/* WE MUST CHECK EV_EOF BEFORE READING */
 	int nb_read = read(client.fd_read, buffer, SIZE_BUFF);
 
 	if (nb_read == -1)
@@ -201,7 +202,6 @@ void Worker::read_client(int i)
 		process_client(client.fd);
 		return ;
 	}
-	
 	if (nb_read >= SIZE_BUFF)
 	{
 		client.state = READY;
@@ -221,8 +221,10 @@ void Worker::write_client(int i)
 	std::cout << ", " << _event_list[i].data << " bytes to write\n";
 #endif 
 	
+	/* WE MUST CHECK EV_EOF BEFORE WRITING */
 	int size_write = std::min(client.request.body.size(), (size_t)_event_list[i].data);
 	size_write = write(client.fd_write, client.request.body.c_str(), size_write);
+	std::cout << "SIZE WRITE is " << size_write << std::endl;
 	if (size_write == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
 	if ((size_t)size_write < client.request.body.size())
