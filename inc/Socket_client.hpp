@@ -77,6 +77,12 @@ class Socket_client {
 	void _process_return(void);
 	void _process_upload(void);
 	void _process_normal(void);
+	void _process_delete(std::string& path);
+	void _process_get_head(std::string& path);
+	void _delete_recursively(DIR *dir, std::string& path);
+	int  _test_all_index(std::string& path);
+	int _open_file_fill_response(std::string& path);
+	std::string _process_build_path(void);
 	void _set_error(short code);
 	size_t  _get_file_size(int fd);
 	bool	_is_dir(const char* path);

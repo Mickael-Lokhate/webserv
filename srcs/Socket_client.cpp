@@ -130,9 +130,13 @@ void Socket_client::generate_directory_listing(void)
 		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
 			throw std::runtime_error("strftime");
 		std::string file = path + "/" + dp->d_name;
+		std::string link = request.uri;
+		if (*(link.end() - 1) != '/')
+			link += "/";
+		link += dp->d_name;
 		if (stat(file.c_str(), &inf) == -1)
 			throw std::runtime_error(strerror(errno));
-		response.body.append("\t\t<tr><td valign=\"top\"><a href=\"" + file + "\">" +
+		response.body.append("\t\t<tr><td valign=\"top\"><a href=\"" + link + "\">" +
 					/* Name */
 					std::string(dp->d_name) + "</a></td>" +
 					/* Last-modified */
@@ -801,9 +805,114 @@ void Socket_client::_process_upload()
 	_set_error(403);
 }
 
-void Socket_client::_process_normal()
+void Socket_client::_delete_recursively(DIR *dir, std::string& path)
+{
+	struct dirent *s_dirent;
+
+	if (!dir)
+		return _set_error(403);
+	while ((s_dirent = readdir(dir)))
+	{
+		if ((strncmp(s_dirent->d_name, ".", 2) == 0) || (strncmp(s_dirent->d_name, "..", 3) == 0))
+			continue ;
+		if (s_dirent->d_type == DT_DIR)
+		{
+			std::string new_path = path + "/" + s_dirent->d_name;
+			_delete_recursively(opendir((path + "/" + s_dirent->d_name).c_str()), new_path);
+			rmdir((path + "/" + s_dirent->d_name).c_str());
+		}
+		remove((path + "/" + s_dirent->d_name).c_str());
+	}
+	closedir(dir);
+}
+
+void Socket_client::_process_delete(std::string& path)
+{
+	if (_is_dir(path.c_str()) && *(path.end() - 1) != '/')
+		return _set_error(409);
+	if (_is_dir(path.c_str()) && (path == route.root.first + "/"))
+	{
+		_delete_recursively(opendir(path.c_str()), path);	
+		return _set_error(403);
+	}
+	if (!_is_dir(path.c_str()))
+	{
+		if (unlink(path.c_str()) == 0)
+		{
+			response.status = 204; // DELETE  OK but no more information to send
+			state = READY;
+			return ;
+		}
+	}
+	else if (nftw(path.c_str(), _remove, 20, FTW_DEPTH | FTW_PHYS) == 0)
+	{
+		response.status = 204; // DELETE  OK but no more information to send
+		state = READY;
+		return ;
+	}
+	return _set_error(404);
+}
+
+int Socket_client::_test_all_index(std::string& path)
+{
+	for (std::vector<std::string>::iterator it = route.index.begin(); it != route.index.end(); ++it)
+	{
+		if (*(path.end() - 1) != '/' && (*it).at(0) != '/')
+			path.push_back('/');
+		std::string tmp_path = path + *it;
+		if(_open_file_fill_response(tmp_path))
+			return 1;
+	}
+	return 0;
+}
+
+int Socket_client::_open_file_fill_response(std::string& path)
+{
+	if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
+	{
+		if (!(state & ERROR))
+			response.status = 200;
+		response.content_length = _get_file_size(fd_read);
+		response.content_type = _get_file_mime(path);
+		if (request.method.compare("GET") == 0)
+			state |= NEED_READ;
+		else
+			state = READY;
+		return 1;
+	}	
+	return 0;
+}
+
+void Socket_client::_process_get_head(std::string& path)
+{
+	if (_is_dir(path.c_str()))
+	{
+		if (!route.index.empty())
+			if (_test_all_index(path))
+				return ;
+		if (errno == EACCES)
+			return _set_error(403);
+		if (route.autoindex.compare("on") == 0) {
+			try { generate_directory_listing(); }
+			catch (...) { _set_error(500); }
+			return ;
+		}
+		return _set_error(403);
+	}
+	else
+	{
+		if (_open_file_fill_response(path))
+			return ;
+		if (errno == EACCES)
+			return _set_error(403);
+		return _set_error(404);
+	}
+}
+
+std::string Socket_client::_process_build_path()
 {
 	std::string path = request.uri;
+
 	if (!route.root.first.empty())
 	{
 		if (route.root.second)
@@ -814,92 +923,20 @@ void Socket_client::_process_normal()
 		}
 		path.insert(0, route.root.first);
 	}
+	return path;
+}
+
+void Socket_client::_process_normal()
+{
+	std::string path = _process_build_path();
+	
 	if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
-	{
-		if (_is_dir(path.c_str()))
-		{
-			if (!route.index.empty())
-			{
-				for (std::vector<std::string>::iterator it = route.index.begin(); it != route.index.end(); ++it)
-				{
-					if (*(path.end() - 1) != '/' && (*it).at(0) != '/')
-						path.push_back('/');
-					std::string tmp_path = path + *it;
-					if ((fd_read = open(tmp_path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
-					{
-						if (!(state & ERROR))
-							response.status = 200;
-						response.content_length = _get_file_size(fd_read);
-						response.content_type = _get_file_mime(tmp_path);
-						if (request.method.compare("GET") == 0)
-							state |= NEED_READ;
-						else
-							state = READY;
-						return ;
-					}
-				}
-				// a tester la difference entre CA
-				if (route.autoindex.compare("on") == 0) 
-				{
-					try { generate_directory_listing(); }
-					catch (...) { _set_error(500); }
-					return ;
-				}
-				return _set_error(404);
-			}
-			// ET CA
-			if (route.autoindex.compare("on") == 0) {
-				try { generate_directory_listing(); }
-				catch (...) { _set_error(500); }
-				return ;
-			}
-			return _set_error(403);
-		}
-		else
-		{
-			if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
-			{
-				if (!(state & ERROR))
-					response.status = 200;
-				response.content_length = _get_file_size(fd_read);
-				response.content_type = _get_file_mime(path);
-				if (request.method.compare("GET") == 0)
-					state |= NEED_READ;
-				else
-					state = READY;
-				return ;
-			}
-			return _set_error(404);
-		}
-	}
+		return _process_get_head(path);
 	else if (request.method.compare("DELETE") == 0)
-	{
-		if (_is_dir(path.c_str()) && *(path.end() - 1) != '/')
-			return _set_error(409);
-		if (_is_dir(path.c_str()) && (path == route.root.first + "/"))
-		{	
-			//nftw((path).c_str(), _remove, 64, FTW_DEPTH | FTW_PHYS);
-			return _set_error(403);
-		}
-		if (!_is_dir(path.c_str()))
-		{
-			if (unlink(path.c_str()) == 0)
-			{
-				response.status = 204; // DELETE  OK but no more information to send
-				state = READY;
-				return ;
-			}
-		}
-		else if (nftw(path.c_str(), _remove, 20, FTW_DEPTH | FTW_PHYS) == 0)
-		{
-			response.status = 204; // DELETE  OK but no more information to send
-			state = READY;
-			return ;
-		}
-		return _set_error(404);
-	}
+		return	_process_delete(path);	
 	else
 	{
+		/* PUT or POST must have go through CGI or UPLOAD so just return 200 here */
 		response.status = 200;
 		response.read_end = true;
 		state = READY;
