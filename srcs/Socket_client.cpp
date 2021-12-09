@@ -885,10 +885,10 @@ void Socket_client::_process_return()
 
 void Socket_client::_process_upload()
 {
-	std::string file = route.upload;
+	std::string file = route.upload + "/";
 	std::string tmp_filename = request.uri.substr(route.location.size(), request.uri.size());
 	file += tmp_filename;
-	
+
 	if (_is_dir(file.c_str()))
 		return _set_error(409);
 	if (!_is_dir(route.upload.c_str())) 
@@ -911,6 +911,8 @@ void Socket_client::_process_upload()
 		response.status = 201; 
 		return ;
 	}
+	if (errno == EACCES || errno == ENOTDIR)
+		return _set_error(500);
 	_set_error(403);
 }
 
