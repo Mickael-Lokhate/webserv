@@ -109,7 +109,7 @@ void Socket_client::big_what(void) const
 void Socket_client::generate_directory_listing(void)
 {
 	std::string					path = route.root.first + request.uri;
-	DIR *						d = opendir(path.c_str());
+	DIR *						dirp = opendir(path.c_str());
 	struct dirent * 			dp;
 	struct stat					inf;
 	char						buf[100];
@@ -119,14 +119,16 @@ void Socket_client::generate_directory_listing(void)
 		"Last-modified</th>\r\n<th scope=\"col\">Size</th>\r\n</tr>\r\n";
 	static const	std::string sep = "\t\t<tr><th colspan=\"5\"><hr></th></tr>\r\n";
 
-	if (!d)
+	if (!dirp)
+	{
 		throw std::runtime_error(strerror(errno));
+	}
 	response.body.append(top);
 	response.body.append("Index of " + request.uri + "</title>\r\n\t</head>\r\n\t<body>\r\n\t" +
 				"<h1>Index of " + request.uri + "</h1>\r\n\t<table>\r\n");
 	response.body.append(col);
 	response.body.append(sep);
-	while ((dp = readdir(d)) != NULL)
+	while ((dp = readdir(dirp)) != NULL)
 	{
 		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
 			throw std::runtime_error("strftime");
@@ -147,7 +149,7 @@ void Socket_client::generate_directory_listing(void)
 	}
 	response.body.append(sep);
 	response.body.append(bot);
-	closedir(d);
+	closedir(dirp);
 	state = READY;
 	response.status = 200;
 	response.content_length = response.body.size();
@@ -185,6 +187,7 @@ void Socket_client::_setup_cgi()
 														"" : co->second);
 	cgi.content_length = "CONTENT_LENGTH=" + to_string(request.content_length);
 
+	cgi.path_info = "PATH_INFO=" + request.uri;
 	cgi.query_string = "QUERY_STRING=" + request.query;
 	cgi.request_method = "REQUEST_METHOD=" + request.method;
 	cgi.path_translated = "PATH_TRANSLATED=" + _real_path(request.uri);
@@ -196,8 +199,6 @@ void Socket_client::_setup_cgi()
 	cgi.remote_port = "REMOTE_PORT=" + port;
 	cgi.server_port = "SERVER_PORT=" + server->port;
 	cgi.server_name = "SERVER_NAME=" + server->server_name[0];
-	/* ajouter la query string */
-	cgi.path_info = "PATH_INFO=" + request.uri;
 
 	cgi.path = "PATH=" + (getenv("PATH") ? std::string(getenv("PATH")) : "");
 	cgi.pwd = "PWD=" + (getenv("PWD") ? std::string(getenv("PWD")) : "");
@@ -310,7 +311,7 @@ const std::string & Socket_client::check_method() {
 
 void Socket_client::_update_stat(int _state, short _status)
 {
-	static short closed_status[] = {400, 501, 505, 413};
+	static short closed_status[] = {400, 501, 505, 413, 414, 431};
 	static const int size = (sizeof(closed_status)/sizeof(short));
 	response.status = _status;
 	state = _state;
@@ -357,6 +358,8 @@ void Socket_client::process_request_line()
 	}
 	if (!found || buffer_recv[found - 1] != '\r')
 		request.delim = "\n";
+	if (found > SIZE_BUFF)
+		return _update_stat(ROUTE | ERROR, 414);
 	// empty line before request line
 	if (buffer_recv.compare(0, request.delim.size(), request.delim) == 0) {
 		buffer_recv.erase(0, request.delim.size());
@@ -385,6 +388,7 @@ void Socket_client::process_request_line()
 	while (buffer_recv[request.method.size() +
 			request.uri.size() + spaces] == ' ' )
 		++spaces;
+	/* is this a HTTP/1.1 request ? */
 	found = buffer_recv.find(version, request.method.size() + request.uri.size() +
 							spaces);
 	if (found == std::string::npos)
@@ -392,7 +396,6 @@ void Socket_client::process_request_line()
 	/* did we analyse the all request line ? */
 	if 	(buffer_recv.compare(found + version.size(), request.delim.size(), request.delim)) 
 		return _update_stat(ROUTE | ERROR, 400);
-	/* is this a HTTP/1.1 request ? */
 	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
 }
@@ -411,6 +414,8 @@ void Socket_client::process_headers()
 			state = HEADERS;
 			return;
 		}
+		if (found > SIZE_BUFF)
+			return _update_stat(ROUTE | ERROR, 431);
 		if (!found)
 		{
 			if (!request.host.empty())
@@ -613,7 +618,7 @@ void Socket_client::_set_error(short code)
 		action = ACTION_NORMAL;
 	}
 	else {
-		_update_stat(ERROR, code);
+		_update_stat(RESPONSE | ERROR, code);
 		process_response();
 	}
 }
@@ -634,10 +639,12 @@ void Socket_client::process_response() {
 	{
 		if (route.error_page.find(to_string(response.status)) != route.error_page.end())
 		{
-			route = server->choose_route(route.error_page[to_string(response.status)]);
-			request.method = "GET";
+			std::string host = request.host;
+			request = Request();
 			request.uri = route.error_page[to_string(response.status)];
-			request.body.clear();
+			route = server->choose_route(request.uri);
+			request.method = "GET";
+			request.host = host;
 		}
 		else 
 		{
@@ -657,10 +664,6 @@ void Socket_client::process_response() {
 		_process_cgi();
 	else
 		_process_normal();
-#ifdef DEBUG1
-	std::cout << "--RESPONSE--" << std::endl;
-	response.what();
-#endif
 }
 
 void Socket_client::process_body_response()
@@ -703,7 +706,6 @@ void Socket_client::process_header_generic()
 	/* common headers */
 	buffer_send.append(std::string("Connection: ") +
 			(closed ? "closed" : "keep-alive") + CRLF);
-
 	buffer_send.append(std::string("Content-Type: ") +
 			response.content_type + CRLF);
 	buffer_send.append(std::string("Server: ") +
@@ -759,35 +761,34 @@ static void _extract_cgi_headers(std::map<std::string, std::string>
 	} 
 }
 
-void Socket_client::_populate_headers_CGI(std::map<std::string, std::string>
-		& cgi_headers, std::string & delim)
+void Socket_client::_populate_headers_CGI(std::map<std::string, std::string> & cgi_headers)
 {
 	/* search for Status-line, add it if necessary */
 	if (cgi_headers.find("status") != cgi_headers.end())
 	{
-		buffer_send.append(std::string("HTTP/1.1 ") + cgi_headers["status"] + delim);
+		buffer_send.append(std::string("HTTP/1.1 ") + cgi_headers["status"] + CRLF);
 		cgi_headers.erase("status");
 	}
 	else 
-		buffer_send.append("HTTP/1.1 200 OK" + delim);
+		buffer_send.append("HTTP/1.1 200 OK" + std::string(CRLF));
 	/* search for Content-Type/Content-type, add it if necessary */
 	if (cgi_headers.find("content-type") != cgi_headers.end())
 	{
-		buffer_send.append("Content-Type: " + cgi_headers["content-type"] + delim);
+		buffer_send.append("Content-Type: " + cgi_headers["content-type"] + CRLF);
 		cgi_headers.erase("content-type");
 	}
 	else 
-		buffer_send.append("Content-Type: "+ response.content_type + delim);
+		buffer_send.append("Content-Type: "+ response.content_type + CRLF);
 	/* search for Content-length, disable chunked if found */
 	if (cgi_headers.find("content-length") != cgi_headers.end())
 	{
-		buffer_send.append("Content-Length: " + cgi_headers["content-length"] + delim);
+		buffer_send.append("Content-Length: " + cgi_headers["content-length"] + CRLF);
 		cgi_headers.erase("content-length");
 		response.chunked = false;
 	}
 	else 
 	{
-		buffer_send.append(std::string("Transfer-Encoding: ") + "chunked" + delim);
+		buffer_send.append(std::string("Transfer-Encoding: ") + "chunked" + CRLF);
 		response.chunked = true;
 	}
 }
@@ -822,19 +823,19 @@ void Socket_client::process_header_CGI()
 		return _set_error(502);
 	}
 	/* make a valid HTTP response from CGI output */
-	_populate_headers_CGI(cgi_headers, delim);
+	_populate_headers_CGI(cgi_headers);
 	/* add custom headers set by CGI script */
 	for (std::map<std::string, std::string>::iterator it = cgi_headers.begin();
 		it != cgi_headers.end(); it++)
-		buffer_send.append(it->first + ": " + it->second + delim);
-	if (response.chunked)
-	buffer_send.append(std::string("Server: ") + "webserv/v0.1" + delim);
+		buffer_send.append(it->first + ": " + it->second + CRLF);
+	buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
 	if (gettimeofday(&now, NULL) == -1)
 		throw std::runtime_error(strerror(errno));
 	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
 		throw std::runtime_error("strftime");
-	buffer_send.append(std::string("Date: ") + buf + delim);
-	buffer_send.append(std::string("Connection: keep-alive") + delim + delim);
+	buffer_send.append(std::string("Date: ") + buf + CRLF);
+	buffer_send.append(std::string("Connection: ") +
+			(closed ? "closed" : "keep-alive") + CRLF + CRLF);
 	response.body.erase(0, found + delim.size() * 2);
 }
 
@@ -862,8 +863,10 @@ void Socket_client::fetch_response()
 }
 
 void Socket_client::_process_cgi() {
-	_setup_cgi();
-	try { _exec_cgi(); }
+	try {
+		_setup_cgi();
+		_exec_cgi(); 
+	}
 	catch (...) 
 	{
 		state |= ERROR;
@@ -883,12 +886,9 @@ void Socket_client::_process_return()
 void Socket_client::_process_upload()
 {
 	std::string file = route.upload;
-	size_t		pos = request.uri.find_last_of("/");
-	std::string tmp_filename = request.uri.substr(pos, request.uri.size() - pos);
+	std::string tmp_filename = request.uri.substr(route.location.size(), request.uri.size());
 	file += tmp_filename;
 	
-	if (request.content_length <= 0)
-		return _set_error(500);
 	if (_is_dir(file.c_str()))
 		return _set_error(409);
 	if (!_is_dir(route.upload.c_str())) 
@@ -911,10 +911,6 @@ void Socket_client::_process_upload()
 		response.status = 201; 
 		return ;
 	}
-	/*
-	 * We should check if we got an error on permission or a
-	 * system error which should be marked as error 500
-	 */
 	_set_error(403);
 }
 

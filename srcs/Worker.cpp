@@ -91,7 +91,10 @@ void Worker::recv_client(int i)
 	Socket_client & client = _socket_clients[_event_list[i].ident];
 
 	if (read(client.fd, buffer, _event_list[i].data) == -1)
+	{
+		del_client(i);
 		throw std::runtime_error(std::string(strerror(errno)));
+	}
 #ifdef DEBUG
 	std::cout << "[Worker] -  recv client -> ";
 	client.what();
@@ -121,7 +124,10 @@ void Worker::send_client(int i)
 	size_send = std::min(std::min((size_t)_event_list[i].data, (size_t)SIZE_BUFF), client.buffer_send.size());
 	size_send = write(client.fd, client.buffer_send.c_str(), size_send);
 	if (size_send == -1)
+	{
+		del_client(i);
 		throw std::runtime_error(std::string(strerror(errno)));
+	}
 	update_modif_list(client.fd, EVFILT_TIMER,
 			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);
 	if ((size_t)size_send < client.buffer_send.size())
@@ -177,7 +183,10 @@ void Worker::read_client(int i)
 	int nb_read = read(client.fd_read, buffer, SIZE_BUFF);
 
 	if (nb_read == -1) {
-		throw std::runtime_error(std::string(strerror(errno)));
+		client._set_error(500);
+		close(client.fd_read);
+		process_client(client.fd);
+		return ;	
 	}
 	client.response.body.append(buffer, nb_read);
 	if (client.action != ACTION_CGI)
@@ -193,7 +202,6 @@ void Worker::read_client(int i)
 	}
 	else if (_event_list[i].flags & EV_EOF)
 	{
-		// TODO EOF sans fflags
 		close(client.fd_read);
 		waitpid(client.cgi.pid, &client.cgi.exit_code, WNOHANG);	
 		client.response.read_end = true;
@@ -219,19 +227,23 @@ void Worker::write_client(int i)
 #endif 
 
 	if (_event_list[i].filter & EV_EOF) {
+		close(client.fd_write);
 		if (client.action != ACTION_CGI) {
 			client._set_error(500);
 			process_client(client.fd);
 		}
-		close(client.fd_write);
 		return;
 	}
-	/* WE MUST CHECK EV_EOF BEFORE WRITING */
 	int size_write = std::min(client.request.body.size(), (size_t)_event_list[i].data);
 	size_write = write(client.fd_write, client.request.body.c_str(), size_write);
-	std::cout << "SIZE WRITE is " << size_write << std::endl;
-	if (size_write == -1)
-		throw std::runtime_error(std::string(strerror(errno)));
+	if (size_write == -1) {
+		close(client.fd_write);
+		if (client.action != ACTION_CGI) {
+			client._set_error(500);
+			process_client(client.fd);
+		}
+		return;
+	}
 	if ((size_t)size_write < client.request.body.size())
 	{
 		client.request.body.erase(0, size_write);

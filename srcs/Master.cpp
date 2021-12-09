@@ -56,7 +56,8 @@ void Master::work() {
 	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
 		it->second.listen_();
 	Worker worker(_socket_servers);
-	worker.event_loop();
+	try { worker.event_loop(); } 
+	catch (...) { std::cerr << "kevent error\n"; }
 }
 
 void Master::what() const {
