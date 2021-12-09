@@ -794,15 +794,34 @@ void Socket_client::_process_upload()
 	_set_error(403);
 }
 
+void Socket_client::_delete_recursively(DIR *dir, std::string& path)
+{
+	struct dirent *s_dirent;
+
+	if (!dir)
+		return _set_error(403);
+	while ((s_dirent = readdir(dir)))
+	{
+		if ((strncmp(s_dirent->d_name, ".", 2) == 0) || (strncmp(s_dirent->d_name, "..", 3) == 0))
+			continue ;
+		if (s_dirent->d_type == DT_DIR)
+		{
+			std::string new_path = path + "/" + s_dirent->d_name;
+			_delete_recursively(opendir((path + "/" + s_dirent->d_name).c_str()), new_path);
+			rmdir((path + "/" + s_dirent->d_name).c_str());
+		}
+		remove((path + "/" + s_dirent->d_name).c_str());
+	}
+	closedir(dir);
+}
+
 void Socket_client::_process_delete(std::string& path)
 {
 	if (_is_dir(path.c_str()) && *(path.end() - 1) != '/')
 		return _set_error(409);
 	if (_is_dir(path.c_str()) && (path == route.root.first + "/"))
 	{
-		// Temporaire => Need delete all content in directory but not the directory
-		nftw((path).c_str(), _remove, 20, FTW_DEPTH | FTW_PHYS);
-		mkdir(path.c_str(), 0766);
+		_delete_recursively(opendir(path.c_str()), path);	
 		return _set_error(403);
 	}
 	if (!_is_dir(path.c_str()))
@@ -906,6 +925,7 @@ void Socket_client::_process_normal()
 		return	_process_delete(path);	
 	else
 	{
+		/* PUT or POST must have go through CGI or UPLOAD so just return 200 here */
 		response.status = 200;
 		response.read_end = true;
 		state = READY;
