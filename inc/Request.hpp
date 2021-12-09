@@ -19,6 +19,7 @@ class Request {
 	std::map<std::string, std::string>	headers;
 	std::string 						body;
 	std::string							delim;
+	std::string							query;
 
 	Request();
 	Request(const Request & ref);
