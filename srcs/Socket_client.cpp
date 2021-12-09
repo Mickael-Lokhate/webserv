@@ -175,16 +175,12 @@ void Socket_client::_setup_cgi()
 						request.headers.find("content-type");
 	std::map<std::string, std::string>::iterator co =
 						request.headers.find("cookie");
-	std::map<std::string, std::string>::iterator cl =
-						request.headers.find("content-length");
-
 
 	cgi.content_type = "CONTENT_TYPE=" + (ct == request.headers.end() ?
 														"" : ct->second);
 	cgi.http_cookie = "HTTP_COOKIE=" + (co == request.headers.end() ?
 														"" : co->second);
-	cgi.content_length = "CONTENT_LENGTH=" + (cl == request.headers.end() ?
-														"" : cl->second);
+	cgi.content_length = "CONTENT_LENGTH=" + to_string(request.content_length);
 
 	cgi.query_string = "QUERY_STRING=" + request.query;
 	cgi.request_method = "REQUEST_METHOD=" + request.method;
@@ -444,7 +440,7 @@ void Socket_client::process_headers()
 		key = _tolower(key);
 		val = buffer_recv.substr(colon + COLON,
 				found - (colon + COLON));
-		val = _tolower(_ltrim(_rtrim(val)));
+		val = _ltrim(_rtrim(val));
 		if (key == "host")
 		{
 			/* Host duplicate */
@@ -483,7 +479,7 @@ void Socket_client::process_headers()
 				_update_stat(ROUTE | ERROR, 400);
 				return;
 			}
-			if (val == "chunked")
+			if (_tolower(val) == "chunked")
 				request.chunked = true;
 			else 
 			{
