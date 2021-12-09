@@ -2,6 +2,14 @@
 
 extern std::map<std::string, std::string> mime_types;
 
+int _remove(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
+	(void)sb;
+	(void)typeflag;
+	(void)ftwbuf;
+	return remove(fpath);
+}
+
 long _extract_content_length(const std::string & str)
 {
 	long long 	result = 0;
@@ -149,5 +157,3 @@ std::string _get_file_mime(std::string const & tmp_path) {
 		ext = "text/plain";
 	return ext; 
 }
-
-

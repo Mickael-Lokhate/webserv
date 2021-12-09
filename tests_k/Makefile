@@ -2,10 +2,10 @@ NAME = TesterServer
 
 CXX = clang++
 
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -g -I ../inc
+CXXFLAGS = -Wall -Wextra -std=c++98 -g -I ../inc
 
 SRCS = test.cpp TesterServer.cpp ../srcs/Server.cpp \
-		../srcs/Route.cpp ../srcs/utils.cpp
+		../srcs/Route.cpp ../srcs/utils.cpp ../srcs/init.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 ifdef DEBUG

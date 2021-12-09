@@ -54,7 +54,7 @@ class Socket_client {
 
 	void generate_directory_listing(void);
 
-	bool is_valid_uri(std::string const & str);
+	bool is_valid_uri();
 	const std::string & check_method(void);
 
 	bool get_ckunked_body(void);
@@ -67,6 +67,7 @@ class Socket_client {
 	void process_header_CGI();
 	void process_header_response();
 	void process_body_response();
+	void clean(void);
 
 	private:
 
@@ -81,6 +82,12 @@ class Socket_client {
 	void _process_return(void);
 	void _process_upload(void);
 	void _process_normal(void);
+	void _process_delete(std::string& path);
+	void _process_get_head(std::string& path);
+	void _delete_recursively(DIR *dir, std::string& path);
+	int  _test_all_index(std::string& path);
+	int _open_file_fill_response(std::string& path);
+	std::string _process_build_path(void);
 	void _set_error(short code);
 	size_t  _get_file_size(int fd);
 	bool	_is_dir(const char* path);

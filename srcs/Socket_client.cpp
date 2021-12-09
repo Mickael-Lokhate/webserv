@@ -22,6 +22,7 @@ Socket_client::Socket_client(const Socket_client & ref)
 	*this = ref;
 }
 
+
 Socket_client::~Socket_client(void)
 {
 	;
@@ -44,6 +45,18 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	action = ref.action;
 	closed = ref.closed;
 	return *this;
+}
+
+void Socket_client::clean(void)
+{
+	buffer_send.clear();
+	state = REQUEST_LINE;
+	request = Request();
+	response = Response();
+	cgi = Cgi();
+	route = Route();
+	fd_read = -1;
+	fd_write = -1;
 }
 
 void Socket_client::what_state(void) const
@@ -92,12 +105,6 @@ void Socket_client::big_what(void) const
 	socket_server->big_what();
 }
 
-bool Socket_client::is_valid_uri(std::string const & str) {
-	if (str[0] != '/')
-		return false;
-	return true;
-}
-
 void Socket_client::generate_directory_listing(void)
 {
 	std::string					path = route.root.first + request.uri;
@@ -123,9 +130,13 @@ void Socket_client::generate_directory_listing(void)
 		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
 			throw std::runtime_error("strftime");
 		std::string file = path + "/" + dp->d_name;
+		std::string link = request.uri;
+		if (*(link.end() - 1) != '/')
+			link += "/";
+		link += dp->d_name;
 		if (stat(file.c_str(), &inf) == -1)
 			throw std::runtime_error(strerror(errno));
-		response.body.append("\t\t<tr><td valign=\"top\"><a href=\"" + file + "\">" +
+		response.body.append("\t\t<tr><td valign=\"top\"><a href=\"" + link + "\">" +
 					/* Name */
 					std::string(dp->d_name) + "</a></td>" +
 					/* Last-modified */
@@ -138,6 +149,9 @@ void Socket_client::generate_directory_listing(void)
 	closedir(d);
 	state = READY;
 	response.status = 200;
+	response.content_length = response.body.size();
+	response.content_type = "text/html";
+	response.read_end = true;
 }
 
 static void _abort(void)
@@ -197,7 +211,7 @@ void Socket_client::_setup_cgi()
 	cgi.script_name = "SCRIPT_NAME=" + _real_path(request.uri);
 	cgi.script_name = "SCRIPT_FILENAME=" + _real_path(request.uri);
 	cgi.request_uri = "REQUEST_URI=" + request.uri;
-	cgi.document_uri = "DOCUMENT_URI=" + _delete_query(request.uri);
+	cgi.document_uri = "DOCUMENT_URI=" + request.uri;
 	cgi.remote_addr = "REMOTE_ADDR=" + addr;
 	cgi.remote_port = "REMOTE_PORT=" + port;
 	cgi.server_port = "SERVER_PORT=" + server->port;
@@ -323,6 +337,32 @@ void Socket_client::_update_stat(int _state, short _status)
 	closed = std::find(closed_status, closed_status + size, response.status) != (closed_status + size);
 }
 
+bool Socket_client::is_valid_uri() {
+	size_t pos;
+	std::string tmp = _tolower(request.uri.substr(0, 8));
+	if ((tmp.compare(0, 7, "http://") == 0) || (tmp.compare(0, 8, "https://") == 0))
+	{
+		pos = request.uri.find("/");
+		request.uri.erase(0, pos + 2);
+		pos = request.uri.find("/");
+		request.host = request.uri.substr(0, pos);
+		if (request.host.empty() || (request.host.find("..") != std::string::npos))
+			return false;
+		request.uri.erase(0, request.host.size());
+		request.headers["host"] = request.host;
+		request.host = "";
+	}
+	request.query = server->_delete_uri_variable(request.uri);
+	server->_delete_duplicate_slash(request.uri);
+	server->_remove_simple_dot(request.uri);
+	if (!server->_format_double_dot(request.uri))
+		return false;
+	server->_decode_uri(request.uri);
+	if (request.uri.empty())
+		request.uri = "/";
+	return true;
+}
+
 /* request-line   = method SP request-target SP HTTP-version CRLF */
 void Socket_client::process_request_line()
 {
@@ -358,7 +398,7 @@ void Socket_client::process_request_line()
 	}
 	request.uri = buffer_recv.substr(request.method.size() + spaces,
 		   					found - (request.method.size() + spaces));
-	if (!is_valid_uri(request.uri)) {
+	if (!is_valid_uri()) {
 		_update_stat(ROUTE | ERROR, 400);
 		return ;
 	}
@@ -402,6 +442,12 @@ void Socket_client::process_headers()
 				buffer_recv.erase(0, found + request.delim.size());
 				if (request.content_length == -1)
 					request.content_length = 0;
+				if (request.headers.find("host") != request.headers.end())
+					request.host = request.headers["host"];
+				size_t pos = request.host.find(":");
+				if (pos != std::string::npos)
+					request.host = request.host.substr(0, pos);
+				request.what();
 				state = ROUTE;
 				return;
 			}
@@ -660,7 +706,7 @@ void Socket_client::process_body_response()
 			if (response.body.size() < SIZE_CH && !response.read_end)
 				break;
 			if (response.body.empty())
-				buffer_send.append(std::string(CRLF) + "0" + CRLF);
+				buffer_send.append(std::string("0") + CRLF);
 		}
 	}
 	else {
@@ -864,7 +910,11 @@ void Socket_client::_process_upload()
 	size_t		pos = request.uri.find_last_of("/");
 	std::string tmp_filename = request.uri.substr(pos, request.uri.size() - pos);
 	file += tmp_filename;
-
+	
+	if (request.content_length <= 0)
+		return _set_error(500);
+	if (_is_dir(file.c_str()))
+		return _set_error(409);
 	if (!_is_dir(route.upload.c_str())) 
 		return _set_error(500);
 	if ((fd_write = open(file.c_str(), O_WRONLY | O_TRUNC |
@@ -875,6 +925,8 @@ void Socket_client::_process_upload()
 		response.status = 204; 
 		return ;
 	}
+	else if (errno == EACCES)
+		return _set_error(500);
 	else if (errno == ENOENT && ((fd_write = open(file.c_str(),
 			O_WRONLY | O_CREAT | O_NONBLOCK, 0600)) != -1))
 	{
@@ -890,75 +942,37 @@ void Socket_client::_process_upload()
 	_set_error(403);
 }
 
-void Socket_client::_process_normal()
+void Socket_client::_delete_recursively(DIR *dir, std::string& path)
 {
-	std::string path = request.uri;
-	if (!route.root.first.empty())
+	struct dirent *s_dirent;
+
+	if (!dir)
+		return _set_error(403);
+	while ((s_dirent = readdir(dir)))
 	{
-		if (route.root.second)
-			path = route.root.first;
-		else
-			path.insert(0, route.root.first);
+		if ((strncmp(s_dirent->d_name, ".", 2) == 0) || (strncmp(s_dirent->d_name, "..", 3) == 0))
+			continue ;
+		if (s_dirent->d_type == DT_DIR)
+		{
+			std::string new_path = path + "/" + s_dirent->d_name;
+			_delete_recursively(opendir((path + "/" + s_dirent->d_name).c_str()), new_path);
+			rmdir((path + "/" + s_dirent->d_name).c_str());
+		}
+		remove((path + "/" + s_dirent->d_name).c_str());
 	}
-	if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
+	closedir(dir);
+}
+
+void Socket_client::_process_delete(std::string& path)
+{
+	if (_is_dir(path.c_str()) && *(path.end() - 1) != '/')
+		return _set_error(409);
+	if (_is_dir(path.c_str()) && (path == route.root.first + "/"))
 	{
-		if (_is_dir(path.c_str()))
-		{
-			if (!route.index.empty())
-			{
-				for (std::vector<std::string>::iterator it = route.index.begin(); it != route.index.end(); ++it)
-				{
-					if (*(path.end() - 1) != '/' && (*it).at(0) != '/')
-						path.push_back('/');
-					std::string tmp_path = path + *it;
-					if ((fd_read = open(tmp_path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
-					{
-						if (!(state & ERROR))
-							response.status = 200;
-						response.content_length = _get_file_size(fd_read);
-						response.content_type = _get_file_mime(tmp_path);
-						if (request.method.compare("GET") == 0)
-							state |= NEED_READ;
-						else
-							state = READY;
-						return ;
-					}
-				}
-				// a tester la difference entre CA
-				if (route.autoindex.compare("on") == 0) 
-				{
-					try { generate_directory_listing(); }
-					catch (...) { _set_error(500); }
-					return ;
-				}
-				return _set_error(404);
-			}
-			// ET CA
-			if (route.autoindex.compare("on") == 0) {
-				try { generate_directory_listing(); }
-				catch (...) { _set_error(500); }
-				return ;
-			}
-			return _set_error(403);
-		}
-		else
-		{
-			if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
-			{
-				if (!(state & ERROR))
-					response.status = 200;
-				response.content_length = _get_file_size(fd_read);
-				response.content_type = _get_file_mime(path);
-				if (request.method.compare("GET") == 0)
-					state |= NEED_READ;
-				else
-					state = READY;
-				return ;
-			}
-			return _set_error(404);
-		}
+		_delete_recursively(opendir(path.c_str()), path);	
+		return _set_error(403);
 	}
-	else if (request.method.compare("DELETE") == 0)
+	if (!_is_dir(path.c_str()))
 	{
 		if (unlink(path.c_str()) == 0)
 		{
@@ -966,15 +980,105 @@ void Socket_client::_process_normal()
 			state = READY;
 			return ;
 		}
-		return _set_error(404);
+	}
+	else if (nftw(path.c_str(), _remove, 20, FTW_DEPTH | FTW_PHYS) == 0)
+	{
+		response.status = 204; // DELETE  OK but no more information to send
+		state = READY;
+		return ;
+	}
+	return _set_error(404);
+}
+
+int Socket_client::_test_all_index(std::string& path)
+{
+	for (std::vector<std::string>::iterator it = route.index.begin(); it != route.index.end(); ++it)
+	{
+		if (*(path.end() - 1) != '/' && (*it).at(0) != '/')
+			path.push_back('/');
+		std::string tmp_path = path + *it;
+		if(_open_file_fill_response(tmp_path))
+			return 1;
+	}
+	return 0;
+}
+
+int Socket_client::_open_file_fill_response(std::string& path)
+{
+	if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
+	{
+		if (!(state & ERROR))
+			response.status = 200;
+		response.content_length = _get_file_size(fd_read);
+		response.content_type = _get_file_mime(path);
+		if (request.method.compare("GET") == 0)
+			state |= NEED_READ;
+		else
+			state = READY;
+		return 1;
+	}	
+	return 0;
+}
+
+void Socket_client::_process_get_head(std::string& path)
+{
+	if (_is_dir(path.c_str()))
+	{
+		if (!route.index.empty())
+			if (_test_all_index(path))
+				return ;
+		if (errno == EACCES)
+			return _set_error(403);
+		if (route.autoindex.compare("on") == 0) {
+			try { generate_directory_listing(); }
+			catch (...) { _set_error(500); }
+			return ;
+		}
+		return _set_error(403);
 	}
 	else
 	{
-		response.status = 200;
-		state = READY;
+		if (_open_file_fill_response(path))
+			return ;
+		if (errno == EACCES)
+			return _set_error(403);
+		return _set_error(404);
 	}
 }
 
+std::string Socket_client::_process_build_path()
+{
+	std::string path = request.uri;
+
+	if (!route.root.first.empty())
+	{
+		if (route.root.second)
+		{
+			size_t pos = path.find(route.location);
+			if (pos != std::string::npos)
+				path.erase(pos, route.location.length());
+		}
+		path.insert(0, route.root.first);
+	}
+	return path;
+}
+
+void Socket_client::_process_normal()
+{
+	std::string path = _process_build_path();
+	
+	if (request.method.compare("GET") == 0 || request.method.compare("HEAD") == 0)
+		return _process_get_head(path);
+	else if (request.method.compare("DELETE") == 0)
+		return	_process_delete(path);	
+	else
+	{
+		/* PUT or POST must have go through CGI or UPLOAD so just return 200 here */
+		response.status = 200;
+		response.read_end = true;
+		state = READY;
+	}
+}
 
 size_t Socket_client::_get_file_size(int fd)
 {
@@ -989,4 +1093,4 @@ bool Socket_client::_is_dir(const char* path)
 	struct stat buf;
 	stat(path, &buf);
 	return S_ISDIR(buf.st_mode);
-}
+}	
