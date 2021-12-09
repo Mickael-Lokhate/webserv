@@ -1,4 +1,4 @@
-etupinclude "Socket_client.hpp"
+#include "Socket_client.hpp"
 
 extern std::map<short, std::string> status_msgs;
 extern std::map<short, std::string> default_pages;
@@ -160,25 +160,6 @@ static void _abort(void)
 	_exit(EXIT_FAILURE);
 }
 
-static std::string _extract_query(const std::string & uri)
-{
-	size_t found;
-
-	if ((found = uri.find("?")) == std::string::npos)
-		return "";
-	else return uri.substr(found + 1, std::string::npos);
-}
-
-static std::string _delete_query(const std::string & uri)
-{
-	size_t found;
-
-
-	if ((found = uri.find("?")) == std::string::npos)
-		return uri;
-	else return uri.substr(0, found);
-}
-
 std::string Socket_client::_real_path(const std::string & uri)
 {
 	if (route.root.second)
@@ -202,15 +183,15 @@ void Socket_client::_setup_cgi()
 														"" : ct->second);
 	cgi.http_cookie = "HTTP_COOKIE=" + (co == request.headers.end() ?
 														"" : co->second);
-	cgi.content_length = "CONTENT_LENGTH=" + (cl == request.headers.end() ? 
+	cgi.content_length = "CONTENT_LENGTH=" + (cl == request.headers.end() ?
 														"" : cl->second);
 
-	cgi.query_string = "QUERY_STRING=" + _extract_query(request.uri);
+	cgi.query_string = "QUERY_STRING=" + request.query;
 	cgi.request_method = "REQUEST_METHOD=" + request.method;
 	cgi.path_translated = "PATH_TRANSLATED=" + _real_path(request.uri);
 	cgi.script_name = "SCRIPT_NAME=" + _real_path(request.uri);
 	cgi.script_name = "SCRIPT_FILENAME=" + _real_path(request.uri);
-	cgi.request_uri = "REQUEST_URI=" + request.uri;
+	cgi.request_uri = "REQUEST_URI=" + request.uri + "?" + request.query;
 	cgi.document_uri = "DOCUMENT_URI=" + request.uri;
 	cgi.remote_addr = "REMOTE_ADDR=" + addr;
 	cgi.remote_port = "REMOTE_PORT=" + port;
@@ -287,7 +268,7 @@ void Socket_client::_prepare_pipes(void)
 void Socket_client::_exec_cgi(void)
 {
 	pid_t		pid;
-	std::string exe = route.root.first + _delete_query(request.uri);
+	std::string exe = route.root.first + request.uri;
 
 #ifdef DEBUG
 	std::cout << "[Cgi] - start CGI execution" << std::endl;
@@ -447,7 +428,6 @@ void Socket_client::process_headers()
 				size_t pos = request.host.find(":");
 				if (pos != std::string::npos)
 					request.host = request.host.substr(0, pos);
-				request.what();
 				state = ROUTE;
 				return;
 			}
@@ -669,11 +649,11 @@ void Socket_client::process_response() {
 			return ;
 		}
 	}
-	_set_action();
 	if (route.limit_except.size() && find(route.limit_except.begin(),
 		route.limit_except.end(), request.method) == route.limit_except.end())
-		_set_error(405);
-	else if (action == ACTION_RETURN)
+		return _set_error(405);
+	_set_action();
+	if (action == ACTION_RETURN)
 		_process_return();
 	else if (action == ACTION_UPLOAD)
 		_process_upload();
@@ -706,7 +686,7 @@ void Socket_client::process_body_response()
 			if (response.body.size() < SIZE_CH && !response.read_end)
 				break;
 			if (response.body.empty())
-				buffer_send.append(std::string("0") + CRLF);
+				buffer_send.append(std::string("0") + CRLF + CRLF);
 		}
 	}
 	else {
@@ -789,7 +769,7 @@ void Socket_client::_populate_headers_CGI(std::map<std::string, std::string>
 	/* search for Status-line, add it if necessary */
 	if (cgi_headers.find("status") != cgi_headers.end())
 	{
-		buffer_send.append(std::string("HTTP/1.1 ") + cgi_headers["status"]);
+		buffer_send.append(std::string("HTTP/1.1 ") + cgi_headers["status"] + delim);
 		cgi_headers.erase("status");
 	}
 	else 
@@ -858,8 +838,8 @@ void Socket_client::process_header_CGI()
 	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
 		throw std::runtime_error("strftime");
 	buffer_send.append(std::string("Date: ") + buf + delim);
-	buffer_send.append(std::string("Connection: keep-alive") + delim);
-	response.body.erase(0, found);
+	buffer_send.append(std::string("Connection: keep-alive") + delim + delim);
+	response.body.erase(0, found + delim.size() * 2);
 }
 
 void Socket_client::process_header_response()
