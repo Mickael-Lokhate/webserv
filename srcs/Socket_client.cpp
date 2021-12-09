@@ -105,12 +105,6 @@ void Socket_client::big_what(void) const
 	socket_server->big_what();
 }
 
-bool Socket_client::is_valid_uri(std::string const & str) {
-	if (str[0] != '/')
-		return false;
-	return true;
-}
-
 void Socket_client::generate_directory_listing(void)
 {
 	std::string					path = route.root.first + request.uri;
@@ -166,43 +160,24 @@ static void _abort(void)
 	_exit(EXIT_FAILURE);
 }
 
-static std::string _extract_query(const std::string & uri)
-{
-	size_t found;
-
-	if ((found = uri.find("?")) == std::string::npos)
-		return "";
-	else return uri.substr(found + 1, std::string::npos);
-}
-
-static std::string _delete_query(const std::string & uri)
-{
-	size_t found;
-
-
-	if ((found = uri.find("?")) == std::string::npos)
-		return uri;
-	else return uri.substr(0, found);
-}
-
 void Socket_client::_setup_cgi()
 {
 	cgi.path = "PATH=" + (getenv("PATH") ? std::string(getenv("PATH")) : "");
 	cgi.pwd = "PWD=" + (getenv("PWD") ? std::string(getenv("PWD")) : "");
-	cgi.query_string = "QUERY_STRING=" + _extract_query(request.uri);
+	cgi.query_string = "QUERY_STRING=" + request.query;
 	cgi.request_method = "REQUEST_METHOD=" + request.method;
 	cgi.content_type = "CONTENT_TYPE=" + request.headers["content-type"];
 	cgi.content_length = "CONTENT_LENGTH=" + request.headers["content-length"];
-	cgi.path_translated = "PATH_TRANSLATED=" + route.root.first + request.uri;
-	cgi.script_name = "SCRIPT_NAME=" + _delete_query(request.uri);
+	cgi.path_translated = "PATH_TRANSLATED=" + route.root.first + request.uri + "?" + request.query;
+	cgi.script_name = "SCRIPT_NAME=" + request.uri;
 	cgi.request_uri = "REQUEST_URI=" + request.uri;
-	cgi.document_uri = "DOCUMENT_URI=" + _delete_query(request.uri);
+	cgi.document_uri = "DOCUMENT_URI=" + request.uri;
 	cgi.remote_addr = "REMOTE_ADDR=" + addr;
 	cgi.remote_port = "REMOTE_PORT=" + port;
 	cgi.server_port = "SERVER_PORT=" + server->port;
 	cgi.server_name = "SERVER_NAME=" + server->server_name[0];
 	cgi.script_filename = "SCRIPT_FILENAME=" + route.cgi;
-	cgi.path_info = "PATH_INFO=" + _delete_query(request.uri);
+	cgi.path_info = "PATH_INFO=" + request.uri;
 	cgi.http_cookie = "HTTP_COOKIE=" + request.headers["cookie"];
 
 	/* extract X- and HTTP- headers */
@@ -290,7 +265,7 @@ void Socket_client::_exec_cgi(void)
 			dup2(cgi.output[1], STDOUT_FILENO) == -1)
 			_abort();
 		if (execve(route.cgi.c_str(), (char *[]){route.cgi.begin().base(),
-			_delete_query(request.uri).begin().base(), NULL}, cgi.envp.begin().base()) == -1)
+			request.uri.begin().base(), NULL}, cgi.envp.begin().base()) == -1)
 		/* Catch error with waitpid */
 			_abort();
 	}
@@ -317,6 +292,32 @@ void Socket_client::_update_stat(int _state, short _status)
 	response.status = _status;
 	state = _state;
 	closed = std::find(closed_status, closed_status + size, response.status) != (closed_status + size);
+}
+
+bool Socket_client::is_valid_uri() {
+	size_t pos;
+	std::string tmp = _tolower(request.uri.substr(0, 8));
+	if ((tmp.compare(0, 7, "http://") == 0) || (tmp.compare(0, 8, "https://") == 0))
+	{
+		pos = request.uri.find("/");
+		request.uri.erase(0, pos + 2);
+		pos = request.uri.find("/");
+		request.host = request.uri.substr(0, pos);
+		if (request.host.empty() || (request.host.find("..") != std::string::npos))
+			return false;
+		request.uri.erase(0, request.host.size());
+		request.headers["host"] = request.host;
+		request.host = "";
+	}
+	request.query = server->_delete_uri_variable(request.uri);
+	server->_delete_duplicate_slash(request.uri);
+	server->_remove_simple_dot(request.uri);
+	if (!server->_format_double_dot(request.uri))
+		return false;
+	server->_decode_uri(request.uri);
+	if (request.uri.empty())
+		request.uri = "/";
+	return true;
 }
 
 /* request-line   = method SP request-target SP HTTP-version CRLF */
@@ -354,7 +355,7 @@ void Socket_client::process_request_line()
 	}
 	request.uri = buffer_recv.substr(request.method.size() + spaces,
 		   					found - (request.method.size() + spaces));
-	if (!is_valid_uri(request.uri)) {
+	if (!is_valid_uri()) {
 		_update_stat(ROUTE | ERROR, 400);
 		return ;
 	}
@@ -399,6 +400,12 @@ void Socket_client::process_headers()
 				buffer_recv.erase(0, found + request.delim.size());
 				if (request.content_length == -1)
 					request.content_length = 0;
+				if (request.headers.find("host") != request.headers.end())
+					request.host = request.headers["host"];
+				size_t pos = request.host.find(":");
+				if (pos != std::string::npos)
+					request.host = request.host.substr(0, pos);
+				request.what();
 				state = ROUTE;
 				return;
 			}
@@ -658,7 +665,7 @@ void Socket_client::process_body_response()
 			if (response.body.size() < SIZE_CH && !response.read_end)
 				break;
 			if (response.body.empty())
-				buffer_send.append(std::string(CRLF) + "0" + CRLF);
+				buffer_send.append(std::string("0") + CRLF);
 		}
 	}
 	else {

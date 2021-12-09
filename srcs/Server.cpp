@@ -39,38 +39,32 @@ void	Server::_remove_simple_dot(std::string & loc)
 			loc.erase(n, 2);
 }
 
-void	Server::_format_double_dot(std::string & loc)
+bool	Server::_format_double_dot(std::string & loc)
 {
 	size_t n = 0;
 	size_t n_save = 0;
-	while ((n = loc.find("../")) != std::string::npos)
+	while ((n = loc.find("/..")) != std::string::npos)
 	{
 		loc.erase(n, 3);
-		n_save = --n;
-		if ((n = loc.rfind("/", n)) == std::string::npos)
-			throw std::runtime_error("Uri's ../ error");
+		n_save = n;
 		if (!n--)
-			throw std::runtime_error("Uri's ../ error");
+			return 0;
 		if ((n = loc.rfind("/", n)) == std::string::npos)
-			throw std::runtime_error("Uri's ../ error");
-		loc.erase(n + 1, n_save - n);
+			return 0;
+		loc.erase(n, n_save - n);
 	}
+	return 1;
 }
 
-void	Server::_format_uri(std::string & loc)
-{
-	_delete_uri_variable(loc);
-	_remove_simple_dot(loc);
-	_format_double_dot(loc);
-	_decode_uri(loc);
-	_delete_duplicate_slash(loc);
-}
-
-void	Server::_delete_uri_variable(std::string & loc)
+std::string	Server::_delete_uri_variable(std::string & loc)
 {
 	size_t n = loc.find('?');
-	if (n != std::string::npos)
+	std::string query = "";
+	if (n != std::string::npos) {
+		query = loc.substr(n + 1, std::string::npos);
 		loc.erase(n, loc.size() - n);
+	}
+	return query;
 }
 
 void	Server::_decode_uri(std::string & loc)
@@ -203,10 +197,9 @@ Route	Server::_find_default_route(std::string const & ext)
 	return routes[0];
 }
 
-Route	Server::choose_route(const std::string & req)
+Route	Server::choose_route(const std::string & uri)
 {
-	std::string loc(req);
-	_format_uri(loc);
+	std::string loc(uri);
 	std::vector<Route>::iterator it = routes.begin();
 	std::vector<Route>::iterator ite = routes.end();
 	std::vector<std::string> loc_tk(split(loc, '/'));

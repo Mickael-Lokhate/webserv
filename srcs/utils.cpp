@@ -7,7 +7,6 @@ int _remove(const char *fpath, const struct stat *sb, int typeflag, struct FTW *
 	(void)sb;
 	(void)typeflag;
 	(void)ftwbuf;
-
 	return remove(fpath);
 }
 
@@ -158,5 +157,3 @@ std::string _get_file_mime(std::string const & tmp_path) {
 		ext = "text/plain";
 	return ext; 
 }
-
-

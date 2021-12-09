@@ -219,14 +219,10 @@ void TesterServer::format_double_dot(void)
 	#endif
 
 	expected = "[!]runtime_error[!]";
-	try {
-		server._format_double_dot(loctest);
-		_assert_same(1);
-	}
-	catch (std::exception const & e)
-	{
+	if (server._format_double_dot(loctest) == -1)
 		_assert_same(0);
-	}
+	else
+		_assert_same(1);
 
 	#ifdef DEBUG
 		std::cout << "[" << loctest << "]" << std::endl << "[" << expected << "]" << std::endl;
@@ -244,6 +240,32 @@ void TesterServer::format_double_dot(void)
 	loctest = "/example/sousdoc/..//%4F/%20/%42/../../../../example2";
 	server._format_double_dot(loctest);
 	_assert_same(loctest.compare(expected));
+	#ifdef DEBUG
+		std::cout << "[" << loctest << "]" << std::endl << "[" << expected << "]" << std::endl;
+	#endif
+
+	expected = "/example/";
+	loctest = "/example/sousdoc/..//%4F/%20/%42/../../../../example2/../";
+	server._format_double_dot(loctest);
+	_assert_same(loctest.compare(expected));
+	#ifdef DEBUG
+		std::cout << "[" << loctest << "]" << std::endl << "[" << expected << "]" << std::endl;
+	#endif
+
+	expected = "/example";
+	loctest = "/example/sousdoc/..//%4F/%20/%42/../../../../example2/..";
+	server._format_double_dot(loctest);
+	_assert_same(loctest.compare(expected));
+	#ifdef DEBUG
+		std::cout << "[" << loctest << "]" << std::endl << "[" << expected << "]" << std::endl;
+	#endif
+
+	expected = "";
+	loctest = "/directory/Yeah/../../..";
+	if (server._format_double_dot(loctest) == -1)
+		_assert_same(0);
+	else
+		_assert_same(1);
 	#ifdef DEBUG
 		std::cout << "[" << loctest << "]" << std::endl << "[" << expected << "]" << std::endl;
 	#endif
