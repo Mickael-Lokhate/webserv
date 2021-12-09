@@ -1,4 +1,4 @@
-#include "Socket_client.hpp"
+etupinclude "Socket_client.hpp"
 
 extern std::map<short, std::string> status_msgs;
 extern std::map<short, std::string> default_pages;
@@ -160,25 +160,67 @@ static void _abort(void)
 	_exit(EXIT_FAILURE);
 }
 
+static std::string _extract_query(const std::string & uri)
+{
+	size_t found;
+
+	if ((found = uri.find("?")) == std::string::npos)
+		return "";
+	else return uri.substr(found + 1, std::string::npos);
+}
+
+static std::string _delete_query(const std::string & uri)
+{
+	size_t found;
+
+
+	if ((found = uri.find("?")) == std::string::npos)
+		return uri;
+	else return uri.substr(0, found);
+}
+
+std::string Socket_client::_real_path(const std::string & uri)
+{
+	if (route.root.second)
+		return std::string(route.root.first +
+				uri.substr(route.location.size(), uri.size()));
+	else
+		return std::string(route.root.first + uri); 
+}
+
 void Socket_client::_setup_cgi()
 {
-	cgi.path = "PATH=" + (getenv("PATH") ? std::string(getenv("PATH")) : "");
-	cgi.pwd = "PWD=" + (getenv("PWD") ? std::string(getenv("PWD")) : "");
-	cgi.query_string = "QUERY_STRING=" + request.query;
+	std::map<std::string, std::string>::iterator ct =
+						request.headers.find("content-type");
+	std::map<std::string, std::string>::iterator co =
+						request.headers.find("cookie");
+	std::map<std::string, std::string>::iterator cl =
+						request.headers.find("content-length");
+
+
+	cgi.content_type = "CONTENT_TYPE=" + (ct == request.headers.end() ?
+														"" : ct->second);
+	cgi.http_cookie = "HTTP_COOKIE=" + (co == request.headers.end() ?
+														"" : co->second);
+	cgi.content_length = "CONTENT_LENGTH=" + (cl == request.headers.end() ? 
+														"" : cl->second);
+
+	cgi.query_string = "QUERY_STRING=" + _extract_query(request.uri);
 	cgi.request_method = "REQUEST_METHOD=" + request.method;
-	cgi.content_type = "CONTENT_TYPE=" + request.headers["content-type"];
-	cgi.content_length = "CONTENT_LENGTH=" + request.headers["content-length"];
-	cgi.path_translated = "PATH_TRANSLATED=" + route.root.first + request.uri + "?" + request.query;
-	cgi.script_name = "SCRIPT_NAME=" + request.uri;
+	cgi.path_translated = "PATH_TRANSLATED=" + _real_path(request.uri);
+	cgi.script_name = "SCRIPT_NAME=" + _real_path(request.uri);
+	cgi.script_name = "SCRIPT_FILENAME=" + _real_path(request.uri);
 	cgi.request_uri = "REQUEST_URI=" + request.uri;
 	cgi.document_uri = "DOCUMENT_URI=" + request.uri;
 	cgi.remote_addr = "REMOTE_ADDR=" + addr;
 	cgi.remote_port = "REMOTE_PORT=" + port;
 	cgi.server_port = "SERVER_PORT=" + server->port;
 	cgi.server_name = "SERVER_NAME=" + server->server_name[0];
-	cgi.script_filename = "SCRIPT_FILENAME=" + route.cgi;
+	/* ajouter la query string */
 	cgi.path_info = "PATH_INFO=" + request.uri;
-	cgi.http_cookie = "HTTP_COOKIE=" + request.headers["cookie"];
+
+	cgi.path = "PATH=" + (getenv("PATH") ? std::string(getenv("PATH")) : "");
+	cgi.pwd = "PWD=" + (getenv("PWD") ? std::string(getenv("PWD")) : "");
 
 	/* extract X- and HTTP- headers */
 	for (std::map<std::string, std::string>::iterator it =
@@ -211,12 +253,12 @@ void Socket_client::_setup_cgi()
 	cgi.envp.push_back(cgi.content_type.begin().base());
 	cgi.envp.push_back(cgi.content_length.begin().base());
 	cgi.envp.push_back(cgi.script_name.begin().base());
+	cgi.envp.push_back(cgi.script_filename.begin().base());
 	cgi.envp.push_back(cgi.request_uri.begin().base());
 	cgi.envp.push_back(cgi.document_uri.begin().base());
 	cgi.envp.push_back(cgi.remote_addr.begin().base());
 	cgi.envp.push_back(cgi.remote_port.begin().base());
 	cgi.envp.push_back(cgi.server_name.begin().base());
-	cgi.envp.push_back(cgi.script_filename.begin().base());
 	cgi.envp.push_back(cgi.path_info.begin().base());
 	cgi.envp.push_back(cgi.http_cookie.begin().base());
 	cgi.envp.push_back(NULL);
@@ -244,7 +286,8 @@ void Socket_client::_prepare_pipes(void)
 
 void Socket_client::_exec_cgi(void)
 {
-	pid_t pid;
+	pid_t		pid;
+	std::string exe = route.root.first + _delete_query(request.uri);
 
 #ifdef DEBUG
 	std::cout << "[Cgi] - start CGI execution" << std::endl;
@@ -253,20 +296,20 @@ void Socket_client::_exec_cgi(void)
 	if ((pid = fork()) == -1)
 	{
 		cgi.close_pipe_worker_side();
+		cgi.close_pipe_cgi_side();
 		throw std::runtime_error(std::string(strerror(errno)));
 	}
 	else if (pid == 0)
 	{
 		/* we SHOULD close socket_clients, socket_server and
-		 * ALL currently opens fd..
-		 */
+		 * ALL currently opens fd.. */
 		cgi.close_pipe_cgi_side();
 		if (dup2(cgi.input[0], STDIN_FILENO)   == -1 ||
 			dup2(cgi.output[1], STDOUT_FILENO) == -1)
 			_abort();
 		if (execve(route.cgi.c_str(), (char *[]){route.cgi.begin().base(),
-			request.uri.begin().base(), NULL}, cgi.envp.begin().base()) == -1)
-		/* Catch error with waitpid */
+			exe.begin().base(), NULL},
+			cgi.envp.begin().base()) == -1)
 			_abort();
 	}
 	cgi.close_pipe_worker_side();
@@ -365,8 +408,9 @@ void Socket_client::process_request_line()
 	found = buffer_recv.find(version, request.method.size() + request.uri.size() +
 							spaces);
 	if ((found == std::string::npos) ||
-		/* doest minor version is a digit ? */
-		!isdigit(buffer_recv[found + version.size()]) ||
+		/* is this a HTTP/1.1 request ? */
+		buffer_recv[found + version.size()] != '1' ||
+		/* did we analyse the all request line ? */
 		buffer_recv.compare(found + version.size() + DIGIT,
 		request.delim.size(), request.delim)) 
 	{
@@ -381,19 +425,17 @@ void Socket_client::process_headers()
 {
 	std::string							key;
 	std::string							val;
-	size_t								cursor;
 	size_t								found;
 	size_t								colon;
 
 	for (;;)
 	{
-		cursor = 0;
-		found = buffer_recv.find(request.delim, cursor);
+		found = buffer_recv.find(request.delim);
 		if (found == std::string::npos) {
 			state = HEADERS;
 			return;
 		}
-		if (found == cursor)
+		if (!found)
 		{
 			if (!request.host.empty())
 			{
@@ -415,14 +457,14 @@ void Socket_client::process_headers()
 				return;
 			}
 		}
-		colon = buffer_recv.find(":", cursor);
+		colon = buffer_recv.find(":");
 		/* ignore invalid headers */
 		if (colon == std::string::npos || colon > found)
 		{
-			cursor = found + request.delim.size();
+			buffer_recv.erase(0, found + request.delim.size());
 			continue ;
 		}
-		key = buffer_recv.substr(cursor, colon - cursor);
+		key = buffer_recv.substr(0, colon);
 		key = _tolower(key);
 		val = buffer_recv.substr(colon + COLON,
 				found - (colon + COLON));
@@ -475,7 +517,6 @@ void Socket_client::process_headers()
 		}
 		else
 			request.headers[key] = val;
-		cursor = found + request.delim.size();
 		buffer_recv.erase(0, found + request.delim.size());
 	}
 }
@@ -675,76 +716,172 @@ void Socket_client::process_body_response()
 	response.head_send = true;
 }
 
-void Socket_client::process_header_response()
+void Socket_client::process_header_generic()
 {
 	char			buf[100];
 	struct timeval	now;
 
-	if (action != ACTION_CGI)
-	{
-		/* status line */
-		buffer_send.append("HTTP/1.1 " + to_string(response.status) +
-				+ " " + status_msgs[response.status] + CRLF);
-		/* common headers */
-		buffer_send.append(std::string("Connection: ") +
-				(closed ? "closed" : "keep-alive") + CRLF);
+	/* status line */
+	buffer_send.append("HTTP/1.1 " + to_string(response.status) +
+			+ " " + status_msgs[response.status] + CRLF);
+	/* common headers */
+	buffer_send.append(std::string("Connection: ") +
+			(closed ? "closed" : "keep-alive") + CRLF);
 
-		buffer_send.append(std::string("Content-Type: ") +
-				response.content_type + CRLF);
-		buffer_send.append(std::string("Server: ") +
-				"webserv/v0.1" + CRLF);
-		if (gettimeofday(&now, NULL) == -1)
-			throw std::runtime_error(strerror(errno));
-		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
-			throw std::runtime_error("strftime");
-		buffer_send.append(std::string("Date: ") + buf + CRLF);
-		if (response.chunked)
-			buffer_send.append(std::string("Transfer-Encoding:") +
-					"chunked" + CRLF);
-		else 
-			buffer_send.append(std::string("Content-Length: ") +
-					to_string(response.content_length) + CRLF);
-		if (action == ACTION_RETURN)
-			buffer_send.append(std::string("Location: ") +
-					response.location + CRLF);
-		/* custom headers */
-		for (std::map<std::string, std::string>::iterator it =
-			response.headers.begin(); it != response.headers.end(); it++)
-			buffer_send.append(it->first + ": " + it->second + CRLF);
-		buffer_send.append(CRLF);
+	buffer_send.append(std::string("Content-Type: ") +
+			response.content_type + CRLF);
+	buffer_send.append(std::string("Server: ") +
+			"webserv/v0.1" + CRLF);
+	if (gettimeofday(&now, NULL) == -1)
+		throw std::runtime_error(strerror(errno));
+	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
+		throw std::runtime_error("strftime");
+	buffer_send.append(std::string("Date: ") + buf + CRLF);
+	if (response.chunked)
+		buffer_send.append(std::string("Transfer-Encoding:") +
+				"chunked" + CRLF);
+	else 
+		buffer_send.append(std::string("Content-Length: ") +
+				to_string(response.content_length) + CRLF);
+	if (action == ACTION_RETURN)
+		buffer_send.append(std::string("Location: ") +
+				response.location + CRLF);
+	/* custom headers */
+	for (std::map<std::string, std::string>::iterator it =
+		response.headers.begin(); it != response.headers.end(); it++)
+		buffer_send.append(it->first + ": " + it->second + CRLF);
+	buffer_send.append(CRLF);
+}
+
+static void _extract_cgi_headers(std::map<std::string, std::string>
+		& cgi_headers, std::string & delim, Response & response, size_t found)
+{
+	size_t		colon;
+	size_t		line = 0;
+	size_t		cursor = 0;
+	std::string key;
+	std::string val;
+
+	while (line != found)
+	{
+		line = response.body.find(delim, cursor);
+		colon = response.body.find(":", cursor);
+		if (colon == std::string::npos || colon > found)
+			break ;
+		/* invalid header */
+		if (colon != std::string::npos && colon > line)
+		{
+			cursor = line + delim.size();
+			continue ;
+		}
+		key = response.body.substr(cursor, colon - cursor);
+		key = _tolower(key);
+		val = response.body.substr(colon + COLON, line -
+				(colon + COLON));
+		cgi_headers[key] = val;
+		cursor = line + delim.size();
+	} 
+}
+
+void Socket_client::_populate_headers_CGI(std::map<std::string, std::string>
+		& cgi_headers, std::string & delim)
+{
+	/* search for Status-line, add it if necessary */
+	if (cgi_headers.find("status") != cgi_headers.end())
+	{
+		buffer_send.append(std::string("HTTP/1.1 ") + cgi_headers["status"]);
+		cgi_headers.erase("status");
+	}
+	else 
+		buffer_send.append("HTTP/1.1 200 OK" + delim);
+	/* search for Content-Type/Content-type, add it if necessary */
+	if (cgi_headers.find("content-type") != cgi_headers.end())
+	{
+		buffer_send.append("Content-Type: " + cgi_headers["content-type"] + delim);
+		cgi_headers.erase("content-type");
+	}
+	else 
+		buffer_send.append("Content-Type: "+ response.content_type + delim);
+	/* search for Content-length, disable chunked if found */
+	if (cgi_headers.find("content-length") != cgi_headers.end())
+	{
+		buffer_send.append("Content-Length: " + cgi_headers["content-length"] + delim);
+		cgi_headers.erase("content-length");
+		response.chunked = false;
 	}
 	else 
 	{
-		size_t found = response.body.find("\n\n");
-		if (found == std::string::npos)
-			buffer_send.append(std::string("HTTP/1.1") +
-					" 502 " + status_msgs[502] + CRLF);
-		/* if no content-length nor content-type, 502 */
-		else if (response.body.find("Content-Type", found) == std::string::npos &&
-				(response.body.find("Content-Length", found) == std::string::npos))
-			buffer_send.append(std::string("HTTP/1.1") +
-					" 502 " + status_msgs[502] + CRLF);
-		else 
-			buffer_send.append(std::string("HTTP/1.1") +
-					" 200 " + status_msgs[200] + CRLF);
-		buffer_send.append(std::string("Transfer-Encoding: ") + "chunked" + CRLF);
+		buffer_send.append(std::string("Transfer-Encoding: ") + "chunked" + delim);
 		response.chunked = true;
-		buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
-		if (gettimeofday(&now, NULL) == -1)
-			throw std::runtime_error(strerror(errno));
-		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
-			throw std::runtime_error("strftime");
-		buffer_send.append(std::string("Date: ") + buf + CRLF);
-		buffer_send.append(std::string("Connection: keep-alive") + CRLF);
-		response.body.erase(0, found);
+	}
+}
+
+void Socket_client::process_header_CGI()
+{
+	size_t			found = response.body.find("\n");
+	std::string		delim = CRLF;
+	char			buf[100];
+	struct timeval	now;
+	std::map<std::string, std::string> cgi_headers;
+
+	if (!found || response.body[found - 1] != '\r')
+		delim = "\n";
+	found = response.body.find(delim + delim);
+	/* there must be at least one header, if not 502 */
+	if (found == std::string::npos)
+	{
+		/* error_page does not apply to CGI response so 
+		 * we mustn't go throw process_response */
+		state |= ERROR;
+		return _set_error(502);
+	}
+	else 
+		_extract_cgi_headers(cgi_headers, delim, response, found);
+	/* A valid CGI response contains at least one header */
+	if (cgi_headers.size() < 1)
+	{
+		/* error_page does not apply to CGI response so 
+		 * we mustn't go throw process_response */
+		state |= ERROR;
+		return _set_error(502);
+	}
+	/* make a valid HTTP response from CGI output */
+	_populate_headers_CGI(cgi_headers, delim);
+	/* add custom headers set by CGI script */
+	for (std::map<std::string, std::string>::iterator it = cgi_headers.begin();
+		it != cgi_headers.end(); it++)
+		buffer_send.append(it->first + ": " + it->second + delim);
+	if (response.chunked)
+	buffer_send.append(std::string("Server: ") + "webserv/v0.1" + delim);
+	if (gettimeofday(&now, NULL) == -1)
+		throw std::runtime_error(strerror(errno));
+	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
+		throw std::runtime_error("strftime");
+	buffer_send.append(std::string("Date: ") + buf + delim);
+	buffer_send.append(std::string("Connection: keep-alive") + delim);
+	response.body.erase(0, found);
+}
+
+void Socket_client::process_header_response()
+{
+	try
+	{
+		if (action != ACTION_CGI)
+			process_header_generic();
+		else 
+			process_header_CGI();
+	}
+	catch (...) 
+	{ 
+		state |= ERROR;
+		return _set_error(500); 
 	}
 }
 
 void Socket_client::fetch_response()
 {
-	if (!response.head_send) {
+	if (!response.head_send) 
 		process_header_response();
-	}
 	process_body_response();
 }
 
@@ -753,8 +890,8 @@ void Socket_client::_process_cgi() {
 	try { _exec_cgi(); }
 	catch (...) 
 	{
-		_set_error(500);
-		return ;
+		state |= ERROR;
+		return _set_error(500);
 	}
 	state |= NEED_WRITE;
 	state |= NEED_READ;

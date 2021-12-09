@@ -63,12 +63,17 @@ class Socket_client {
 	void what_state(void) const;
 	void big_what(void) const;
 	void fetch_response();
+	void process_header_generic();
+	void process_header_CGI();
 	void process_header_response();
 	void process_body_response();
 	void clean(void);
 
 	private:
 
+	std::string _real_path(const std::string & uri);
+	void _populate_headers_CGI(std::map<std::string,
+		std::string> & cgi_headers, std::string & delim);
 	void _setup_cgi(void);
 	void _prepare_pipes(void);
 	void _process_cgi(void);

@@ -15,7 +15,6 @@ class Cgi {
 		std::string					content_type;
 		std::string					content_length;
 		std::string					path_translated;
-		std::string					script_name;
 		std::string					request_uri;
 		std::string					document_uri;
 		static std::string	server_protocol;
@@ -26,6 +25,7 @@ class Cgi {
 		std::string					remote_port;
 		std::string					server_port;
 		std::string					server_name;
+		std::string					script_name;
 		std::string					script_filename;
 		std::string					path_info;
 		std::string					http_cookie;
