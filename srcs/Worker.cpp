@@ -220,13 +220,14 @@ void Worker::read_client(int i)
 void Worker::write_client(int i)
 {
 	Socket_client & client = _socket_clients[(long)_event_list[i].udata];
+	ssize_t			size_write = client.request.body.size();
 #ifdef DEBUG
 	std::cout << "[Worker] -   Write client -> ";
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to write\n";
 #endif 
 
-	if (_event_list[i].filter & EV_EOF) {
+	if (_event_list[i].flags & EV_EOF) {
 		close(client.fd_write);
 		if (client.action != ACTION_CGI) {
 			client._set_error(500);
@@ -234,7 +235,8 @@ void Worker::write_client(int i)
 		}
 		return;
 	}
-	int size_write = std::min(client.request.body.size(), (size_t)_event_list[i].data);
+	if (client.action == ACTION_CGI)
+		size_write = std::min(client.request.body.size(), (size_t)_event_list[i].data);
 	size_write = write(client.fd_write, client.request.body.c_str(), size_write);
 	if (size_write == -1) {
 		close(client.fd_write);
