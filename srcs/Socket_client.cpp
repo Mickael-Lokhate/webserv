@@ -136,9 +136,13 @@ void Socket_client::generate_directory_listing(void)
 		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
 			throw std::runtime_error("strftime");
 		std::string file = path + "/" + dp->d_name;
+		std::string link = request.uri;
+		if (*(link.end() - 1) != '/')
+			link += "/";
+		link += dp->d_name;
 		if (stat(file.c_str(), &inf) == -1)
 			throw std::runtime_error(strerror(errno));
-		response.body.append("\t\t<tr><td valign=\"top\"><a href=\"" + file + "\">" +
+		response.body.append("\t\t<tr><td valign=\"top\"><a href=\"" + link + "\">" +
 					/* Name */
 					std::string(dp->d_name) + "</a></td>" +
 					/* Last-modified */
