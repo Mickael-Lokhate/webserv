@@ -311,7 +311,7 @@ const std::string & Socket_client::check_method() {
 
 void Socket_client::_update_stat(int _state, short _status)
 {
-	static short closed_status[] = {400, 501, 505, 413, 414, 431};
+	static short closed_status[] = {400, 501, 415, 505, 413, 414, 431, 500};
 	static const int size = (sizeof(closed_status)/sizeof(short));
 	response.status = _status;
 	state = _state;
@@ -420,6 +420,11 @@ void Socket_client::process_headers()
 		{
 			if (!request.host.empty())
 			{
+				if (request.method == "DELETE" && 
+						(request.content_length != 0 || request.chunked)) {
+					_update_stat(RESPONSE | ERROR, 415);
+					return;
+				}
 				buffer_recv.erase(0, found + request.delim.size());
 				if (request.content_length == -1)
 					request.content_length = 0;
@@ -461,8 +466,7 @@ void Socket_client::process_headers()
 		else if (key == "content-length")
 		{
 			/* Content-length duplicate */
-			if (request.content_length != -1 && 
-				request.method != "GET") 
+			if (request.content_length != -1) 
 			{
 				_update_stat(ROUTE | ERROR, 400);
 				return;
@@ -515,7 +519,8 @@ bool Socket_client::get_ckunked_body() {
 	size_t pos_delim = 0;
 	size_t cursor = 0;
 	ssize_t size_chunck = -1;
-	while (size_chunck != 0) {
+	bool end = false;
+	while (!end) {
 		if ((pos_delim = buffer_recv.find(request.delim, cursor)) == std::string::npos) 
 			break;
 		// taille
@@ -537,26 +542,28 @@ bool Socket_client::get_ckunked_body() {
 			throw std::logic_error("error chunked : delimiter expected");
 		cursor += request.delim.size();
 		length += size_chunck;
+		if (size_chunck == 0 && buffer_recv.compare(cursor, request.delim.size(), request.delim))
+			end = true;
 	}
 	buffer_recv.erase(0, cursor);
 	request.content_length += length;
-	return (size_chunck == 0);
+	return (end);
 }
 
 
 void Socket_client::process_body() {
-	if (!(request.method == "POST" || request.method == "PUT")) {
-		state = RESPONSE;
-		return;
-	}
 	if (!request.chunked) {
 		if (get_simple_body()) {
 			state = RESPONSE;
+			if (request.method == "GET" || request.method == "HEAD")
+				request.body.clear();
 			return;
 		}
 	} else {
 		try {
 			if (get_ckunked_body()) {
+				if (request.method == "GET" || request.method == "HEAD")
+					request.body.clear();
 				state =  RESPONSE;
 				return ;
 			}
@@ -571,7 +578,7 @@ void Socket_client::process_body() {
 			return ;
 		}
 	}
-	if (!response.status && request.content_length > _stol(route.max_body_size)) {
+	if (!(state & ERROR) && request.content_length > _stol(route.max_body_size)) {
 		_update_stat(RESPONSE | ERROR, 413);
 		return;
 	}	
