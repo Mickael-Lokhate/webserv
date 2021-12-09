@@ -217,7 +217,15 @@ void Worker::write_client(int i)
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to write\n";
 #endif 
-	
+
+	if (_event_list[i].filter & EV_EOF) {
+		if (client.action != ACTION_CGI) {
+			client._set_error(500);
+			process_client(client.fd);
+		}
+		close(client.fd_write);
+		return;
+	}
 	/* WE MUST CHECK EV_EOF BEFORE WRITING */
 	int size_write = std::min(client.request.body.size(), (size_t)_event_list[i].data);
 	size_write = write(client.fd_write, client.request.body.c_str(), size_write);

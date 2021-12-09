@@ -57,6 +57,7 @@ void Socket_client::clean(void)
 	route = Route();
 	fd_read = -1;
 	fd_write = -1;
+	action = 0;
 }
 
 void Socket_client::what_state(void) const
@@ -156,7 +157,9 @@ void Socket_client::generate_directory_listing(void)
 
 static void _abort(void)
 {
+#ifndef DEBUG 
 	std::cout << "[Cgi] - child: " << std::string(strerror(errno)) << std::endl;
+#endif 
 	_exit(EXIT_FAILURE);
 }
 
@@ -611,6 +614,7 @@ void Socket_client::_set_error(short code)
 		response.content_length = response.body.size();
 		response.content_type = "text/html";
 		response.status = code;
+		action = ACTION_NORMAL;
 	}
 	else {
 		_update_stat(ERROR, code);
@@ -681,9 +685,9 @@ void Socket_client::process_body_response()
 			response.body.erase(0, size_chunked);
 			if (response.body.size() < SIZE_CH && !response.read_end)
 				break;
-			if (response.body.empty())
-				buffer_send.append(std::string("0") + CRLF + CRLF);
 		}
+		if (response.body.empty())
+			buffer_send.append(std::string("0") + CRLF + CRLF);
 	}
 	else {
 		buffer_send.append(response.body);

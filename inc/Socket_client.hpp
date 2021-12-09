@@ -68,6 +68,7 @@ class Socket_client {
 	void process_header_response();
 	void process_body_response();
 	void clean(void);
+	void _set_error(short code);
 
 	private:
 
@@ -88,7 +89,6 @@ class Socket_client {
 	int  _test_all_index(std::string& path);
 	int _open_file_fill_response(std::string& path);
 	std::string _process_build_path(void);
-	void _set_error(short code);
 	size_t  _get_file_size(int fd);
 	bool	_is_dir(const char* path);
 	void _set_action();
