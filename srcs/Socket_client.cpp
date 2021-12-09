@@ -1,3 +1,5 @@
+#include <iomanip>
+#include <sstream>
 #include "Socket_client.hpp"
 
 extern std::map<short, std::string> status_msgs;
@@ -130,15 +132,16 @@ void Socket_client::generate_directory_listing(void)
 	response.body.append(sep);
 	while ((dp = readdir(dirp)) != NULL)
 	{
-		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
-			throw std::runtime_error("strftime");
 		std::string file = path + "/" + dp->d_name;
 		std::string link = request.uri;
+
 		if (*(link.end() - 1) != '/')
 			link += "/";
 		link += dp->d_name;
 		if (stat(file.c_str(), &inf) == -1)
 			throw std::runtime_error(strerror(errno));
+		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
+			throw std::runtime_error("strftime");
 		response.body.append("\t\t<tr><td valign=\"top\"><a href=\"" + link + "\">" +
 					/* Name */
 					std::string(dp->d_name) + "</a></td>" +
@@ -979,6 +982,9 @@ int Socket_client::_test_all_index(std::string& path)
 
 int Socket_client::_open_file_fill_response(std::string& path)
 {
+	struct stat now;
+	char		buf[100];
+
 	if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
 	{
 		if (!(state & ERROR))
@@ -989,6 +995,27 @@ int Socket_client::_open_file_fill_response(std::string& path)
 			state |= NEED_READ;
 		else
 			state = READY;
+		if (!fstat(fd_read, &now))
+		{
+			if (strftime(buf, 100, "%a, %d %b %y %T GMT",
+						gmtime(&now.st_mtimespec.tv_sec)))
+			{
+				long				lm = now.st_mtimespec.tv_sec;
+				std::stringstream	ss;
+				std::string			last_modified;
+				std::string			content_length;
+
+				ss << std::hex << lm;
+				last_modified = ss.str();
+				/* empty the string stream */
+				ss.str(std::string());
+				ss << std::hex << response.content_length;
+				content_length = ss.str();
+				response.headers["Last-Modified"] = buf;
+				response.headers["ETag"] = "\"" + last_modified + 
+								"T-" + content_length + "O\"";
+			}
+		}
 		return 1;
 	}	
 	return 0;
