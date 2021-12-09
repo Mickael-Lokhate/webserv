@@ -911,7 +911,7 @@ void Socket_client::_process_upload()
 		response.status = 201; 
 		return ;
 	}
-	if (errno == EACCES || errno == ENOTDIR)
+	if (errno == ENOENT)
 		return _set_error(500);
 	_set_error(403);
 }
