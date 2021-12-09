@@ -311,7 +311,7 @@ const std::string & Socket_client::check_method() {
 
 void Socket_client::_update_stat(int _state, short _status)
 {
-	static short closed_status[] = {400, 501, 413};
+	static short closed_status[] = {400, 501, 505, 413};
 	static const int size = (sizeof(closed_status)/sizeof(short));
 	response.status = _status;
 	state = _state;
@@ -347,7 +347,7 @@ bool Socket_client::is_valid_uri() {
 /* request-line   = method SP request-target SP HTTP-version CRLF */
 void Socket_client::process_request_line()
 {
-	static const std::string	version = "HTTP/1.";
+	static const std::string	version = "HTTP/1.1";
 	size_t 						found;
 	size_t						spaces = 0;
 
@@ -388,16 +388,12 @@ void Socket_client::process_request_line()
 		++spaces;
 	found = buffer_recv.find(version, request.method.size() + request.uri.size() +
 							spaces);
-	if ((found == std::string::npos) ||
-		/* is this a HTTP/1.1 request ? */
-		buffer_recv[found + version.size()] != '1' ||
-		/* did we analyse the all request line ? */
-		buffer_recv.compare(found + version.size() + DIGIT,
-		request.delim.size(), request.delim)) 
-	{
-		_update_stat(ROUTE | ERROR, 400);
-		return;
-	}
+	if (found == std::string::npos)
+		return _update_stat(ROUTE | ERROR, 505);
+	/* did we analyse the all request line ? */
+	if 	(buffer_recv.compare(found + version.size(), request.delim.size(), request.delim)) 
+		return _update_stat(ROUTE | ERROR, 400);
+	/* is this a HTTP/1.1 request ? */
 	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
 }
