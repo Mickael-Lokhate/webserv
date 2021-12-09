@@ -39,22 +39,21 @@ void	Server::_remove_simple_dot(std::string & loc)
 			loc.erase(n, 2);
 }
 
-void	Server::_format_double_dot(std::string & loc)
+int	Server::_format_double_dot(std::string & loc)
 {
 	size_t n = 0;
 	size_t n_save = 0;
-	while ((n = loc.find("../")) != std::string::npos)
+	while ((n = loc.find("/..")) != std::string::npos)
 	{
 		loc.erase(n, 3);
-		n_save = --n;
-		if ((n = loc.rfind("/", n)) == std::string::npos)
-			throw std::runtime_error("Uri's ../ error");
+		n_save = n;
 		if (!n--)
-			throw std::runtime_error("Uri's ../ error");
+			return -1;
 		if ((n = loc.rfind("/", n)) == std::string::npos)
-			throw std::runtime_error("Uri's ../ error");
-		loc.erase(n + 1, n_save - n);
+			return -1;
+		loc.erase(n, n_save - n);
 	}
+	return 0;
 }
 
 void	Server::_format_uri(std::string & loc)
