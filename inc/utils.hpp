@@ -17,6 +17,7 @@
 #define COLON 1
 #define CRLF "\r\n"
 #define SIZE_BUFF 0x2000
+#define WEBSERV_V "webserv/1.20.1"
 
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);

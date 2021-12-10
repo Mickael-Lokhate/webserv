@@ -78,7 +78,9 @@ default_pages[301] =
 "<head><title>301 Moved Permanently</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>301 Moved Permanently</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[302] =
@@ -86,7 +88,9 @@ default_pages[302] =
 "<head><title>302 Found</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>302 Found</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[303] =
@@ -94,7 +98,9 @@ default_pages[303] =
 "<head><title>303 See Other</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>303 See Other</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[307] =
@@ -102,7 +108,9 @@ default_pages[307] =
 "<head><title>307 Temporary Redirect</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>307 Temporary Redirect</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[308] =
@@ -110,7 +118,9 @@ default_pages[308] =
 "<head><title>308 Permanent Redirect</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>308 Permanent Redirect</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[400] =
@@ -118,7 +128,9 @@ default_pages[400] =
 "<head><title>400 Bad Request</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>400 Bad Request</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[401] =
@@ -126,7 +138,9 @@ default_pages[401] =
 "<head><title>401 Authorization Required</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>401 Authorization Required</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[402] =
@@ -134,7 +148,9 @@ default_pages[402] =
 "<head><title>402 Payment Required</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>402 Payment Required</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[403] =
@@ -142,7 +158,9 @@ default_pages[403] =
 "<head><title>403 Forbidden</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>403 Forbidden</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[404] =
@@ -150,7 +168,9 @@ default_pages[404] =
 "<head><title>404 Not Found</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>404 Not Found</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[405] =
@@ -158,7 +178,9 @@ default_pages[405] =
 "<head><title>405 Not Allowed</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>405 Not Allowed</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[406] =
@@ -166,7 +188,9 @@ default_pages[406] =
 "<head><title>406 Not Acceptable</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>406 Not Acceptable</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[408] =
@@ -174,7 +198,9 @@ default_pages[408] =
 "<head><title>408 Request Time-out</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>408 Request Time-out</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[409] =
@@ -182,7 +208,9 @@ default_pages[409] =
 "<head><title>409 Conflict</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>409 Conflict</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[410] =
@@ -190,7 +218,9 @@ default_pages[410] =
 "<head><title>410 Gone</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>410 Gone</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[411] =
@@ -198,7 +228,9 @@ default_pages[411] =
 "<head><title>411 Length Required</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>411 Length Required</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[412] =
@@ -206,7 +238,9 @@ default_pages[412] =
 "<head><title>412 Precondition Failed</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>412 Precondition Failed</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[413] =
@@ -214,7 +248,9 @@ default_pages[413] =
 "<head><title>413 Request Entity Too Large</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>413 Request Entity Too Large</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[414] =
@@ -222,7 +258,9 @@ default_pages[414] =
 "<head><title>414 Request-URI Too Large</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>414 Request-URI Too Large</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[415] =
@@ -230,7 +268,9 @@ default_pages[415] =
 "<head><title>415 Unsupported Media Type</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>415 Unsupported Media Type</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[416] =
@@ -238,7 +278,9 @@ default_pages[416] =
 "<head><title>416 Requested Range Not Satisfiable</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>416 Requested Range Not Satisfiable</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[421] =
@@ -246,7 +288,9 @@ default_pages[421] =
 "<head><title>421 Misdirected Request</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>421 Misdirected Request</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[429] =
@@ -254,7 +298,9 @@ default_pages[429] =
 "<head><title>429 Too Many Requests</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>429 Too Many Requests</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[494] =
@@ -264,7 +310,9 @@ CRLF
 "<body>" CRLF
 "<center><h1>400 Bad Request</h1></center>" CRLF
 "<center>Request Header Or Cookie Too Large</center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[495] =
@@ -274,7 +322,9 @@ CRLF
 "<body>" CRLF
 "<center><h1>400 Bad Request</h1></center>" CRLF
 "<center>The SSL certificate error</center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[496] =
@@ -284,7 +334,9 @@ CRLF
 "<body>" CRLF
 "<center><h1>400 Bad Request</h1></center>" CRLF
 "<center>No required SSL certificate was sent</center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[497] =
@@ -294,7 +346,9 @@ CRLF
 "<body>" CRLF
 "<center><h1>400 Bad Request</h1></center>" CRLF
 "<center>The plain HTTP request was sent to HTTPS port</center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[500] =
@@ -302,7 +356,9 @@ default_pages[500] =
 "<head><title>500 Internal Server Error</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>500 Internal Server Error</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[501] =
@@ -310,7 +366,9 @@ default_pages[501] =
 "<head><title>501 Not Implemented</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>501 Not Implemented</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[502] =
@@ -318,7 +376,9 @@ default_pages[502] =
 "<head><title>502 Bad Gateway</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>502 Bad Gateway</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[503] =
@@ -326,7 +386,9 @@ default_pages[503] =
 "<head><title>503 Service Temporarily Unavailable</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>503 Service Temporarily Unavailable</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[504] =
@@ -334,7 +396,9 @@ default_pages[504] =
 "<head><title>504 Gateway Time-out</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>504 Gateway Time-out</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[505] =
@@ -342,7 +406,9 @@ default_pages[505] =
 "<head><title>505 HTTP Version Not Supported</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>505 HTTP Version Not Supported</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 
 default_pages[507] =
@@ -350,7 +416,9 @@ default_pages[507] =
 "<head><title>507 Insufficient Storage</title></head>" CRLF
 "<body>" CRLF
 "<center><h1>507 Insufficient Storage</h1></center>" CRLF
-;
+"<hr><center>" WEBSERV_V "</center>" CRLF
+"</body>" CRLF
+"</html>";
 
 }
 
