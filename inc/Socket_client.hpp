@@ -72,7 +72,6 @@ class Socket_client {
 
 	private:
 
-	std::string _real_path(const std::string & uri);
 	void _populate_headers_CGI(std::map<std::string,
 		std::string> & cgi_headers); 
 	void _setup_cgi(void);
