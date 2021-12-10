@@ -895,6 +895,10 @@ void Socket_client::_process_return()
 {
 	response.status = to_number<short>(route.return_.first);
 	response.location = route.return_.second;
+	response.body = default_pages[response.status];
+	response.content_length = response.body.size();
+	response.content_type = "text/html";
+	response.read_end = true;
 	state = READY;
 }
 
