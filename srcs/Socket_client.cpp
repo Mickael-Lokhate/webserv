@@ -283,6 +283,7 @@ void Socket_client::_exec_cgi(void)
 		if (dup2(cgi.input[0], STDIN_FILENO)   == -1 ||
 			dup2(cgi.output[1], STDOUT_FILENO) == -1)
 			_abort();
+		_clean_fd_table();
 		if (execve(route.cgi.c_str(), (char *[]){route.cgi.begin().base(),
 			exe.begin().base(), NULL},
 			cgi.envp.begin().base()) == -1)
@@ -997,7 +998,7 @@ int Socket_client::_open_file_fill_response(std::string& path)
 			response.status = 200;
 		response.content_length = _get_file_size(fd_read);
 		response.content_type = _get_file_mime(path);
-		if (request.method.compare("GET") == 0)
+		if (request.method.compare("GET") == 0 && response.content_length)
 			state |= NEED_READ;
 		else {
 			state = READY;
