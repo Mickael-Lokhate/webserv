@@ -335,7 +335,8 @@ bool Socket_client::is_valid_uri() {
 		request.uri.erase(0, request.host.size());
 		request.headers["host"] = request.host;
 		request.host = "";
-	}
+	}else if (request.uri[0] != '/')
+			return false;
 	request.query = server->_delete_uri_variable(request.uri);
 	server->_delete_duplicate_slash(request.uri);
 	server->_remove_simple_dot(request.uri);
@@ -350,7 +351,8 @@ bool Socket_client::is_valid_uri() {
 /* request-line   = method SP request-target SP HTTP-version CRLF */
 void Socket_client::process_request_line()
 {
-	static const std::string	version = "HTTP/1.1";
+	static const std::string	numvers = "1.1";
+	static const std::string	version = " HTTP/";
 	size_t 						found;
 	size_t						spaces = 0;
 
@@ -371,33 +373,23 @@ void Socket_client::process_request_line()
 	}
 	request.method = check_method();
 	if (request.method == "err" || buffer_recv[request.method.size()] != ' ')
-	{
-		_update_stat(ROUTE | ERROR, 400);
-		return;
-	}
-	while (buffer_recv[request.method.size() + spaces] == ' ' )
+		return _update_stat(ROUTE | ERROR, 400);
+	while (buffer_recv[request.method.size() + spaces] == ' ')
 		++spaces;
-	found = buffer_recv.find(" ", request.method.size() + spaces);
-	if (found == std::string::npos) {
-		_update_stat(ROUTE | ERROR, 400);
-		return ;
-	}
-	request.uri = buffer_recv.substr(request.method.size() + spaces,
-		   					found - (request.method.size() + spaces));
-	if (!is_valid_uri()) {
-		_update_stat(ROUTE | ERROR, 400);
-		return ;
-	}
-	while (buffer_recv[request.method.size() +
-			request.uri.size() + spaces] == ' ' )
-		++spaces;
-	/* is this a HTTP/1.1 request ? */
-	found = buffer_recv.find(version, request.method.size() + request.uri.size() +
-							spaces);
+	/* is this a " HTTP/" request ? */
+	found = buffer_recv.find(version, request.method.size() + spaces);
 	if (found == std::string::npos)
+		return _update_stat(ROUTE | ERROR, 400);
+	/* is this a " HTTP/1.1" request ? */
+	if (buffer_recv.compare(found, version.size() + numvers.size() +
+				request.delim.size(), version + numvers + request.delim))
 		return _update_stat(ROUTE | ERROR, 505);
-	/* did we analyse the all request line ? */
-	if 	(buffer_recv.compare(found + version.size(), request.delim.size(), request.delim)) 
+	while (buffer_recv[--found] == ' ')
+		;
+	/* found start at index 0, we must add 1 to it because we mixed it with size */
+	request.uri = buffer_recv.substr(request.method.size() + spaces, 
+								found + 1 - (request.method.size() + spaces));
+	if (!is_valid_uri()) 
 		return _update_stat(ROUTE | ERROR, 400);
 	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
