@@ -165,8 +165,8 @@ void Worker::del_client(int i)
 	close(client.fd_read);
 	close(client.fd_write);
 	close(client.fd);
-	_socket_clients.erase(client.fd);
 	_closed_clients.insert(client.fd);
+	_socket_clients.erase(client.fd);
 }
 
 void Worker::read_client(int i)
@@ -177,6 +177,15 @@ void Worker::read_client(int i)
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to read\n";
 #endif 
+	if ((_event_list[i].flags & EV_EOF) && (_event_list[i].data == 0))
+	{
+		close(client.fd_write);
+		close(client.fd_read);
+		client.action = ACTION_NORMAL;
+		client._update_stat(RESPONSE | ERROR, 502);
+		process_client(client.fd);
+		return ;
+	}
 	char buffer[SIZE_BUFF];
 	/* WE MUST CHECK EV_EOF BEFORE READING */
 	int nb_read = read(client.fd_read, buffer, SIZE_BUFF);

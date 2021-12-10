@@ -283,11 +283,12 @@ void Socket_client::_exec_cgi(void)
 		if (dup2(cgi.input[0], STDIN_FILENO)   == -1 ||
 			dup2(cgi.output[1], STDOUT_FILENO) == -1)
 			_abort();
-		_clean_fd_table();
 		if (execve(route.cgi.c_str(), (char *[]){route.cgi.begin().base(),
 			exe.begin().base(), NULL},
 			cgi.envp.begin().base()) == -1)
 			_abort();
+		close(0);
+		close(1);
 	}
 	cgi.close_pipe_worker_side();
 	cgi.pid = pid;
@@ -998,7 +999,7 @@ int Socket_client::_open_file_fill_response(std::string& path)
 			response.status = 200;
 		response.content_length = _get_file_size(fd_read);
 		response.content_type = _get_file_mime(path);
-		if (request.method.compare("GET") == 0 && response.content_length)
+		if (request.method.compare("GET") == 0)
 			state |= NEED_READ;
 		else {
 			state = READY;
@@ -1044,8 +1045,6 @@ void Socket_client::_process_get_head(std::string& path)
 			catch (...) { _set_error(500); }
 			return ;
 		}
-		if (!route.index.empty())
-			return _set_error(404);
 		return _set_error(403);
 	}
 	else
@@ -1069,7 +1068,7 @@ std::string Socket_client::_process_build_path()
 	{
 		if (route.root.second)
 			path = path.substr(route.location.size(), request.uri.size());		
-		path.insert(0, route.root.first + "/");
+		path.insert(0, route.root.first);
 	}
 	if (action != ACTION_CGI && _is_dir(path.c_str()) && *(path.end() - 1) != '/')
 			path.push_back('/');
