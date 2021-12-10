@@ -168,21 +168,13 @@ static void _abort(void)
 	_exit(EXIT_FAILURE);
 }
 
-std::string Socket_client::_real_path(const std::string & uri)
-{
-	if (route.root.second)
-		return std::string(route.root.first +
-				uri.substr(route.location.size(), uri.size()));
-	else
-		return std::string(route.root.first + uri); 
-}
-
 void Socket_client::_setup_cgi()
 {
 	std::map<std::string, std::string>::iterator ct =
 						request.headers.find("content-type");
 	std::map<std::string, std::string>::iterator co =
 						request.headers.find("cookie");
+	std::string real_path = _process_build_path();
 
 	cgi.content_type = "CONTENT_TYPE=" + (ct == request.headers.end() ?
 														"" : ct->second);
@@ -193,9 +185,9 @@ void Socket_client::_setup_cgi()
 	cgi.path_info = "PATH_INFO=" + request.uri;
 	cgi.query_string = "QUERY_STRING=" + request.query;
 	cgi.request_method = "REQUEST_METHOD=" + request.method;
-	cgi.path_translated = "PATH_TRANSLATED=" + _real_path(request.uri);
-	cgi.script_name = "SCRIPT_NAME=" + _real_path(request.uri);
-	cgi.script_name = "SCRIPT_FILENAME=" + _real_path(request.uri);
+	cgi.path_translated = "PATH_TRANSLATED=" + real_path;
+	cgi.script_name = "SCRIPT_NAME=" + real_path;
+	cgi.script_name = "SCRIPT_FILENAME=" + real_path;
 	cgi.request_uri = "REQUEST_URI=" + request.uri + "?" + request.query;
 	cgi.document_uri = "DOCUMENT_URI=" + request.uri;
 	cgi.remote_addr = "REMOTE_ADDR=" + addr;
@@ -1071,14 +1063,16 @@ std::string Socket_client::_process_build_path()
 {
 	std::string path = request.uri;
 
+	// uri without / but location with /
+	if (route.location.size() > request.uri.size())
+			path.push_back('/');
 	if (!route.root.first.empty())
 	{
 		if (route.root.second)
 			path = path.substr(route.location.size(), request.uri.size());		
 		path.insert(0, route.root.first);
 	}
-	if (_is_dir(path.c_str()))
-		if (*(path.end() - 1) != '/')
+	if (action != ACTION_CGI && _is_dir(path.c_str()) && *(path.end() - 1) != '/')
 			path.push_back('/');
 	return path;
 }
