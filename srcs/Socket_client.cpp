@@ -1043,6 +1043,8 @@ void Socket_client::_process_get_head(std::string& path)
 			catch (...) { _set_error(500); }
 			return ;
 		}
+		if (!route.index.empty())
+			return _set_error(404);
 		return _set_error(403);
 	}
 	else
@@ -1066,7 +1068,7 @@ std::string Socket_client::_process_build_path()
 	{
 		if (route.root.second)
 			path = path.substr(route.location.size(), request.uri.size());		
-		path.insert(0, route.root.first);
+		path.insert(0, route.root.first + "/");
 	}
 	if (action != ACTION_CGI && _is_dir(path.c_str()) && *(path.end() - 1) != '/')
 			path.push_back('/');
