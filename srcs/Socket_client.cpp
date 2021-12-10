@@ -1066,13 +1066,12 @@ std::string Socket_client::_process_build_path()
 	if (!route.root.first.empty())
 	{
 		if (route.root.second)
-		{
-			size_t pos = path.find(route.location);
-			if (pos != std::string::npos)
-				path.erase(pos, route.location.length());
-		}
+			path = path.substr(route.location.size(), request.uri.size());		
 		path.insert(0, route.root.first);
 	}
+	if (_is_dir(path.c_str()))
+		if (*(path.end() - 1) != '/')
+			path.push_back('/');
 	return path;
 }
 
