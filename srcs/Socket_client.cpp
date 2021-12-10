@@ -577,7 +577,12 @@ void Socket_client::process_body() {
 			std::cout << "rest : {" << buffer_recv << "}\n" ;
 			std::cout << e.what() << "\n";
 			#endif
-			_update_stat(RESPONSE | ERROR, 400);
+			if (request.method == "GET" || request.method == "HEAD") {
+				request.body.clear();
+				state =  RESPONSE;
+			}
+			else
+				_update_stat(RESPONSE | ERROR, 400);
 			return ;
 		}
 	}
@@ -714,10 +719,6 @@ void Socket_client::process_header_generic()
 	buffer_send.append("HTTP/1.1 " + to_string(response.status) +
 			+ " " + status_msgs[response.status] + CRLF);
 	/* common headers */
-	buffer_send.append(std::string("Connection: ") +
-			(closed ? "closed" : "keep-alive") + CRLF);
-	buffer_send.append(std::string("Content-Type: ") +
-			response.content_type + CRLF);
 	buffer_send.append(std::string("Server: ") +
 			"webserv/v0.1" + CRLF);
 	if (gettimeofday(&now, NULL) == -1)
@@ -725,6 +726,8 @@ void Socket_client::process_header_generic()
 	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
 		throw std::runtime_error("strftime");
 	buffer_send.append(std::string("Date: ") + buf + CRLF);
+	buffer_send.append(std::string("Content-Type: ") +
+			response.content_type + CRLF);
 	if (response.chunked)
 		buffer_send.append(std::string("Transfer-Encoding:") +
 				"chunked" + CRLF);
@@ -734,6 +737,8 @@ void Socket_client::process_header_generic()
 	if (action == ACTION_RETURN)
 		buffer_send.append(std::string("Location: ") +
 				response.location + CRLF);
+	buffer_send.append(std::string("Connection: ") +
+			(closed ? "closed" : "keep-alive") + CRLF);
 	/* custom headers */
 	for (std::map<std::string, std::string>::iterator it =
 		response.headers.begin(); it != response.headers.end(); it++)
@@ -1036,7 +1041,7 @@ void Socket_client::_process_get_head(std::string& path)
 			if (_test_all_index(path))
 				return ;
 		if (errno == EACCES)
-			return _set_error(403);
+			return _set_error(500);
 		if (route.autoindex.compare("on") == 0) {
 			try { generate_directory_listing(); }
 			catch (...) { _set_error(500); }
@@ -1049,7 +1054,7 @@ void Socket_client::_process_get_head(std::string& path)
 		if (_open_file_fill_response(path))
 			return ;
 		if (errno == EACCES)
-			return _set_error(403);
+			return _set_error(500);
 		return _set_error(404);
 	}
 }
