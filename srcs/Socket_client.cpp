@@ -302,10 +302,10 @@ void Socket_client::_exec_cgi(void)
 
 const std::string & Socket_client::check_method() {
 	static const std::string	methods[] = {
-		"GET", "POST", "PUT", "DELETE", "err"};
+		"GET", "POST", "PUT", "DELETE", "HEAD", "err"};
 	int i;
 
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 5; i++)
 		if (!buffer_recv.compare(0, methods[i].size(),
 								methods[i]))
 			break;
@@ -323,6 +323,7 @@ void Socket_client::_update_stat(int _state, short _status)
 
 bool Socket_client::is_valid_uri() {
 	size_t pos;
+	
 	std::string tmp = _tolower(request.uri.substr(0, 8));
 	if ((tmp.compare(0, 7, "http://") == 0) || (tmp.compare(0, 8, "https://") == 0))
 	{
@@ -628,6 +629,8 @@ void Socket_client::_set_error(short code)
 		state = READY;
 		response.read_end = true;
 		response.content_length = response.body.size();
+		if (request.method == "HEAD")
+			response.body.clear();
 		response.content_type = "text/html";
 		response.status = code;
 		action = ACTION_NORMAL;
@@ -720,7 +723,7 @@ void Socket_client::process_header_generic()
 			+ " " + status_msgs[response.status] + CRLF);
 	/* common headers */
 	buffer_send.append(std::string("Server: ") +
-			"webserv/v0.1" + CRLF);
+			WEBSERV_V + CRLF);
 	if (gettimeofday(&now, NULL) == -1)
 		throw std::runtime_error(strerror(errno));
 	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
@@ -843,7 +846,7 @@ void Socket_client::process_header_CGI()
 	for (std::map<std::string, std::string>::iterator it = cgi_headers.begin();
 		it != cgi_headers.end(); it++)
 		buffer_send.append(it->first + ": " + it->second + CRLF);
-	buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
+	buffer_send.append(std::string("Server: ") + WEBSERV_V + CRLF);
 	if (gettimeofday(&now, NULL) == -1)
 		throw std::runtime_error(strerror(errno));
 	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
@@ -900,6 +903,7 @@ void Socket_client::_process_return()
 	response.content_type = "text/html";
 	response.read_end = true;
 	state = READY;
+	response.read_end = true;
 }
 
 void Socket_client::_process_upload()
@@ -971,6 +975,7 @@ void Socket_client::_process_delete(std::string& path)
 		{
 			response.status = 204; // DELETE  OK but no more information to send
 			state = READY;
+			response.read_end = true;
 			return ;
 		}
 	}
@@ -978,6 +983,7 @@ void Socket_client::_process_delete(std::string& path)
 	{
 		response.status = 204; // DELETE  OK but no more information to send
 		state = READY;
+		response.read_end = true;
 		return ;
 	}
 	return _set_error(404);
@@ -1009,8 +1015,10 @@ int Socket_client::_open_file_fill_response(std::string& path)
 		response.content_type = _get_file_mime(path);
 		if (request.method.compare("GET") == 0)
 			state |= NEED_READ;
-		else
+		else {
 			state = READY;
+			response.read_end = true;
+		}
 		if (!fstat(fd_read, &now))
 		{
 			if (strftime(buf, 100, "%a, %d %b %y %T GMT",
