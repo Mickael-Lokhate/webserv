@@ -163,7 +163,7 @@ void Socket_client::generate_directory_listing(void)
 static void _abort(void)
 {
 #ifndef DEBUG 
-	std::cout << "[Cgi] - child: " << std::string(strerror(errno)) << std::endl;
+	std::cerr << "[Cgi] - child: " << std::string(strerror(errno)) << std::endl;
 #endif 
 	_exit(EXIT_FAILURE);
 }

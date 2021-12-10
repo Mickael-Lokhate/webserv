@@ -177,13 +177,12 @@ void Worker::read_client(int i)
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to read\n";
 #endif 
-
 	char buffer[SIZE_BUFF];
 	/* WE MUST CHECK EV_EOF BEFORE READING */
 	int nb_read = read(client.fd_read, buffer, SIZE_BUFF);
 
 	if (nb_read == -1) {
-		client._set_error(500);
+		client._update_stat(RESPONSE | ERROR, 500);
 		close(client.fd_read);
 		process_client(client.fd);
 		return ;	
@@ -227,21 +226,33 @@ void Worker::write_client(int i)
 	std::cout << ", " << _event_list[i].data << " bytes to write\n";
 #endif 
 
-	if (_event_list[i].flags & EV_EOF) {
+	if (_event_list[i].flags & EV_ERROR)
+	{
 		close(client.fd_write);
-		if (client.action != ACTION_CGI) {
-			client._set_error(500);
-			process_client(client.fd);
-		}
-		return;
+		close(client.fd_read);
+		client.action = ACTION_NORMAL;
+		client._update_stat(RESPONSE | ERROR, 502);
+		process_client(client.fd);
+		return ;
 	}
 	if (client.action == ACTION_CGI)
+	{
+		if (waitpid(client.cgi.pid, &client.cgi.exit_code, WNOHANG) == client.cgi.pid)
+		{
+			close(client.fd_write);
+			close(client.fd_read);
+			client.action = ACTION_NORMAL;
+			client._update_stat(RESPONSE | ERROR, 502);
+			process_client(client.fd);
+			return ;
+		}
 		size_write = std::min(client.request.body.size(), (size_t)_event_list[i].data);
+	}
 	size_write = write(client.fd_write, client.request.body.c_str(), size_write);
 	if (size_write == -1) {
 		close(client.fd_write);
 		if (client.action != ACTION_CGI) {
-			client._set_error(500);
+			client._update_stat(RESPONSE | ERROR, 500);
 			process_client(client.fd);
 		}
 		return;
