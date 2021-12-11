@@ -28,6 +28,7 @@ class Worker {
 	Worker(const Worker & ref);
 	~Worker(void);
 	Worker & operator=(const Worker & right);
+	Socket_client & retrieve_client(long i);
 
 	void event_loop(void);
 
@@ -50,6 +51,7 @@ class Worker {
 	
 	std::vector<struct kevent>		_event_list;
 	std::vector<struct kevent>		_modif_list;
+	int								number_of_events;
 	std::map<int, Socket_client>	_socket_clients;
 	std::map<int, Socket_server>	_socket_servers;
 	std::set<int>					_closed_clients;

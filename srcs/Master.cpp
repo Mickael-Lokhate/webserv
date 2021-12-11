@@ -60,12 +60,17 @@ void Master::work() {
 	std::cout << "Start webserv 1.20.1\n";
 	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
 		it->second.listen_();
-	Worker worker(_socket_servers);
+	while (1) 
+	{
+		Worker worker(_socket_servers);
 #ifdef DEBUG	
-	what();
+		what();
 #endif
-	try { worker.event_loop(); } 
-	catch (...) { std::cerr << "kevent error\n"; }
+		try { worker.event_loop(); } 
+		catch (std::exception & e) { 
+			std::cerr << "kevent error : " << e.what() << "\n";
+		}
+	}
 }
 
 void Master::what() const {
