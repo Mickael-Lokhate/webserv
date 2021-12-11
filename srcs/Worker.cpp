@@ -4,6 +4,14 @@
 template<class T>
 void gwhat(T & obj) { obj.what(); }
 
+Socket_client & Worker::retrieve_client(long i)
+{
+	std::map<int, Socket_client>::iterator it = _socket_clients.find(i);
+	if (it == _socket_clients.end())
+		throw std::runtime_error("invalid client");
+	return it->second;
+}
+
 Worker::Worker(const std::map<int, Socket_server> & socket_servers) :
 	_socket_servers(socket_servers)
 {
@@ -53,7 +61,7 @@ void Worker::new_client(int i)
 	int 				new_client;
 	struct sockaddr_in	from;
 	socklen_t			slen;
-	int					max_back = 64;
+	int					max_back = 32;
 
 	if (_event_list[i].flags & EV_EOF)
 		/* returns the socket error (if any) in fflags */
@@ -91,16 +99,17 @@ void Worker::new_client(int i)
 
 void Worker::recv_client(int i)
 {
+#ifdef DEBUG
+	std::cout << "[Worker] -  recv client : \n";
+#endif 
 	char			buffer[_event_list[i].data];
-	Socket_client & client = _socket_clients[_event_list[i].ident];
-
+	Socket_client & client = retrieve_client(_event_list[i].ident);
 	if (read(client.fd, buffer, _event_list[i].data) == -1)
 	{
 		del_client(i);
 		throw std::runtime_error(std::string(strerror(errno)));
 	}
 #ifdef DEBUG
-	std::cout << "[Worker] -  recv client -> ";
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to read";
 	std::cout << "\n";
@@ -109,23 +118,26 @@ void Worker::recv_client(int i)
 	/* After receiving data, we register a user event to wakeup process_client */
 	if (!(client.state & RESPONSE) && !(client.state & READY))
 		process_client(client.fd);
-
 }
 
 
 void Worker::send_client(int i)
 {
-	Socket_client & client = _socket_clients[_event_list[i].ident];
+#ifdef DEBUG
+	std::cout << "[Worker] -  send client : \n";
+#endif 
 	ssize_t			size_send;
+	Socket_client & client = retrieve_client(_event_list[i].ident);
+	if (client.fd == -1)
+		std::cout << "error" << std::endl;
 
-	#ifdef DEBUG
-	std::cout << "[Worker] -   send client -> ";
+#ifdef DEBUG
 	client.what();
 	std::cout << ", " << client.buffer_send.size() << " bytes to send, ";
 	std::cout << _event_list[i].data << " bytes in pipe";
 	std::cout << "\n";
-	#endif
-	size_send = std::min(std::min((size_t)_event_list[i].data, (size_t)SIZE_BUFF), client.buffer_send.size());
+#endif
+	size_send = std::min((size_t)_event_list[i].data, client.buffer_send.size());
 	size_send = write(client.fd, client.buffer_send.c_str(), size_send);
 	if (size_send == -1)
 	{
@@ -154,12 +166,17 @@ void Worker::send_client(int i)
 
 void Worker::del_client(int i)
 {
-	Socket_client & client = _socket_clients[_event_list[i].ident];
 #ifdef DEBUG
 	std::cout << "[Worker] -   " << 
 	((_event_list[i].filter == EVFILT_TIMER) ? "TO" : "del") 
-	<< " client -> ";
-	_socket_clients.find(_event_list[i].ident)->second.what();
+	<< " client : \n";
+#endif
+	Socket_client & client = retrieve_client(_event_list[i].ident);
+	if (client.fd == -1)
+		std::cout << "error" << std::endl;
+		;
+#ifdef DEBUG
+	client.what();
 	std::cout << "\n";
 #endif 
 	/* Delete timeout if it was not triggered */
@@ -167,6 +184,7 @@ void Worker::del_client(int i)
 		update_modif_list(client.fd, EVFILT_TIMER, EV_DELETE);
 	close(client.fd_read);
 	close(client.fd_write);
+	update_modif_list(client.fd, EVFILT_WRITE, EV_DISABLE);
 	close(client.fd);
 	_closed_clients.insert(client.fd);
 	_socket_clients.erase(client.fd);
@@ -174,9 +192,12 @@ void Worker::del_client(int i)
 
 void Worker::read_client(int i)
 {
-	Socket_client & client = _socket_clients[(long)_event_list[i].udata];
+	int const NB_READ = 128 * 1024;
 #ifdef DEBUG
-	std::cout << "[Worker] -   Read client -> ";
+	std::cout << "[Worker] -   Read client : ";
+#endif 
+	Socket_client & client = retrieve_client((long)_event_list[i].udata);
+#ifdef DEBUG
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to read\n";
 #endif 
@@ -189,20 +210,23 @@ void Worker::read_client(int i)
 //		process_client(client.fd);
 //		return ;
 //	}
-	char buffer[SIZE_BUFF];
+	ssize_t nb_read = NB_READ;
+	if (client.action == ACTION_CGI)
+		nb_read = _event_list[i].data; 	
+	char buffer[nb_read];
 	/* WE MUST CHECK EV_EOF BEFORE READING */
-	int nb_read = read(client.fd_read, buffer, SIZE_BUFF);
+	ssize_t size_read = read(client.fd_read, buffer, nb_read);
 
-	if (nb_read == -1) {
+	if (size_read == -1) {
 		client._update_stat(RESPONSE | ERROR, 500);
 		close(client.fd_read);
 		process_client(client.fd);
 		return ;	
 	}
-	client.response.body.append(buffer, nb_read);
+	client.response.body.append(buffer, size_read);
 	if (client.action != ACTION_CGI)
 	{
-		if (nb_read == _event_list[i].data)
+		if (size_read == _event_list[i].data)
 		{
 			close(client.fd_read);
 			client.response.read_end = true;
@@ -220,7 +244,7 @@ void Worker::read_client(int i)
 		process_client(client.fd);
 		return ;
 	}
-	if (nb_read >= SIZE_BUFF)
+	if (size_read == NB_READ)
 	{
 		client.state = READY;
 		process_client(client.fd);
@@ -230,10 +254,12 @@ void Worker::read_client(int i)
 // upload 
 void Worker::write_client(int i)
 {
-	Socket_client & client = _socket_clients[(long)_event_list[i].udata];
+#ifdef DEBUG
+	std::cout << "[Worker] -   Write client : \n";
+#endif 
+	Socket_client & client = retrieve_client((long)_event_list[i].udata);
 	ssize_t			size_write = client.request.body.size();
 #ifdef DEBUG
-	std::cout << "[Worker] -   Write client -> ";
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to write\n";
 #endif 
@@ -290,12 +316,14 @@ void Worker::write_client(int i)
 
 void Worker::process_client(int fd_client)
 {
+	#ifdef DEBUG
+		std::cout << "[Worker] -   process client : \n";
+	#endif 
 
-	Socket_client & client = _socket_clients[fd_client];
+	Socket_client & client = retrieve_client(fd_client);
 
 	#ifdef DEBUG
-		std::cout << "[Worker] -   process client -> ";
-		_socket_clients[client.fd].what();
+		client.what();
 		std::cout << "\n";
 	#endif 
 	if (!(client.state & RESPONSE) && !(client.state & READY)) 
@@ -336,12 +364,18 @@ void Worker::process_client(int fd_client)
 	}
 }
 
+static void handler(int num)
+{
+	(void)num;
+	std::cerr << "SIGPIPE\n"; 
+}
+
 void Worker::event_loop(void)
 {
-	int					number_of_events;
 	int					kq;
 	std::map<int, Socket_server>::iterator last = _socket_servers.end();
 
+	signal(SIGPIPE, handler);
 	if ((kq = kqueue()) == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
 	while (1)
@@ -364,8 +398,11 @@ void Worker::event_loop(void)
 					new_client(i);
 				else
 				{
-					if (_closed_clients.find(_event_list[i].ident) != 
-						_closed_clients.end())
+					if (_closed_clients.find(_event_list[i].ident) != _closed_clients.end())
+					   continue;	
+					else if(_event_list[i].udata && _socket_clients.find((long)_event_list[i].udata) == _socket_clients.end())
+						continue ;
+					else if(!(_event_list[i].udata) &&  _socket_clients.find(_event_list[i].ident) == _socket_clients.end())
 						continue ;
 					/* fin de connexion client */
 					else if  (!(_event_list[i].udata) && 
@@ -400,7 +437,6 @@ void Worker::event_loop(void)
 		/* We have at least one event registered per client and at most four
 		 * for CGI cases, we setup event_list to receive at most three times
 		 * socket_client size, the up average */
-		//_event_list.resize(_socket_clients.size() * 4 + _socket_servers.size());
-		_event_list.resize(10000);
+		_event_list.resize(20);
 	}
 }
