@@ -518,14 +518,8 @@ bool Socket_client::get_ckunked_body() {
 			throw std::logic_error("error chunked : hexa size");
 		if (pos_delim + request.delim.size() + size_chunck + request.delim.size() > buffer_recv.size())
 			break;
-		#ifdef DEBUG1
-		std::cout << "-> " << size_chunck << "\n";
-		#endif
 		cursor = pos_delim + request.delim.size();
 		request.body.append(buffer_recv.substr(cursor, size_chunck));
-		#ifdef DEBUG1
-		std::cout << " {" <<  buffer_recv.substr(cursor, size_chunck) << "}\n";
-		#endif
 		cursor += size_chunck;
 		if (buffer_recv.compare(cursor, request.delim.size(), request.delim) != 0)
 			throw std::logic_error("error chunked : delimiter expected");
@@ -598,10 +592,6 @@ void Socket_client::prepare_response() {
 		server = socket_server->servers[0]; 
 		route = server->choose_route(request.uri);
 	}
-#ifdef DEBUG1
-	route.what();
-	server->what();
-#endif
 	
 	if (closed) {
 		state = RESPONSE;

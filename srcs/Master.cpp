@@ -31,10 +31,6 @@ void Master::init() {
 		exit(0);
 	}
 
-#ifdef DEBUG	
-	for (std::vector<Server>::const_iterator it = servers.begin(); it != servers.end(); ++it)
-		it->what();
-#endif
 	//create socket_srevers
 
 	std::set<std::pair<std::string, std::string> > listens;
@@ -65,6 +61,9 @@ void Master::work() {
 	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
 		it->second.listen_();
 	Worker worker(_socket_servers);
+#ifdef DEBUG	
+	what();
+#endif
 	try { worker.event_loop(); } 
 	catch (...) { std::cerr << "kevent error\n"; }
 }

@@ -53,7 +53,7 @@ void Worker::new_client(int i)
 	int 				new_client;
 	struct sockaddr_in	from;
 	socklen_t			slen;
-	int					max_back = 32;
+	int					max_back = 64;
 
 	if (_event_list[i].flags & EV_EOF)
 		/* returns the socket error (if any) in fflags */
@@ -400,7 +400,7 @@ void Worker::event_loop(void)
 		/* We have at least one event registered per client and at most four
 		 * for CGI cases, we setup event_list to receive at most three times
 		 * socket_client size, the up average */
-		//_event_list.resize(_socket_clients.size() * 3 + _socket_servers.size());
-		_event_list.resize(100000);
+		//_event_list.resize(_socket_clients.size() * 4 + _socket_servers.size());
+		_event_list.resize(10000);
 	}
 }
