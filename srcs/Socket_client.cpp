@@ -162,7 +162,7 @@ void Socket_client::generate_directory_listing(void)
 
 static void _abort(void)
 {
-#ifndef DEBUG 
+#ifdef DEBUG 
 	std::cerr << "[Cgi] - child: " << std::string(strerror(errno)) << std::endl;
 #endif 
 	_exit(EXIT_FAILURE);
@@ -206,7 +206,6 @@ void Socket_client::_setup_cgi()
 		if (header.find("HTTP-") == 0 || header.find("X-") == 0)
 		{
 			cgi.special_headers.push_back(std::string("HTTP_") + header);
-
 			std::string & back = cgi.special_headers.back();
 			for (size_t i = 0; i < back.size(); i++)
 				if (back[i] == '-')
@@ -544,6 +543,10 @@ bool Socket_client::get_ckunked_body() {
 void Socket_client::process_body() {
 	if (!request.chunked) {
 		if (get_simple_body()) {
+			if (!(state & ERROR) && request.content_length > _stol(route.max_body_size)) {
+				_update_stat(RESPONSE | ERROR, 413);
+				return;
+			}	
 			state = RESPONSE;
 			if (request.method == "GET" || request.method == "HEAD")
 				request.body.clear();
@@ -552,6 +555,10 @@ void Socket_client::process_body() {
 	} else {
 		try {
 			if (get_ckunked_body()) {
+				if (!(state & ERROR) && request.content_length > _stol(route.max_body_size)) {
+								_update_stat(RESPONSE | ERROR, 413);
+								return;
+				}	
 				if (request.method == "GET" || request.method == "HEAD")
 					request.body.clear();
 				state =  RESPONSE;
@@ -573,10 +580,6 @@ void Socket_client::process_body() {
 			return ;
 		}
 	}
-	if (!(state & ERROR) && request.content_length > _stol(route.max_body_size)) {
-		_update_stat(RESPONSE | ERROR, 413);
-		return;
-	}	
 	state = BODY;
 }
 
@@ -1045,6 +1048,8 @@ void Socket_client::_process_get_head(std::string& path)
 			catch (...) { _set_error(500); }
 			return ;
 		}
+		if (!route.index.empty())
+			return _set_error(404);
 		return _set_error(403);
 	}
 	else
@@ -1068,7 +1073,7 @@ std::string Socket_client::_process_build_path()
 	{
 		if (route.root.second)
 			path = path.substr(route.location.size(), request.uri.size());		
-		path.insert(0, route.root.first);
+		path.insert(0, route.root.first + "/");
 	}
 	if (action != ACTION_CGI && _is_dir(path.c_str()) && *(path.end() - 1) != '/')
 			path.push_back('/');

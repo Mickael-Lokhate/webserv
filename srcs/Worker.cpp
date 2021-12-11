@@ -53,13 +53,17 @@ void Worker::new_client(int i)
 	int 				new_client;
 	struct sockaddr_in	from;
 	socklen_t			slen;
+	int					max_back = 32;
 
 	if (_event_list[i].flags & EV_EOF)
 		/* returns the socket error (if any) in fflags */
 		throw std::runtime_error(std::string(strerror(_event_list[i].fflags)));
 	slen = sizeof(from);
+#ifdef DEBUG
+	std::cout << "[Worker] -   Backlog : " << _event_list[i].data << "\n";
+#endif
 	/* data contains the size of the listen backlog. */
-	while (_event_list[i].data--)
+	while (_event_list[i].data-- && max_back--)
 	{
 		if ((new_client = accept(_event_list[i].ident,
 						(struct sockaddr *)&from, &slen)) == -1)
@@ -142,7 +146,6 @@ void Worker::send_client(int i)
 			/* Setup client's timeout for sending back data */
 			update_modif_list(client.fd, EVFILT_TIMER,
 					EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
-			//std::cout << "{" << client.buffer_recv << "}\n";
 			if (!client.buffer_recv.empty()) 
 				process_client(client.fd);
 		}
@@ -177,15 +180,15 @@ void Worker::read_client(int i)
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to read\n";
 #endif 
-	if ((_event_list[i].flags & EV_EOF) && (_event_list[i].data == 0))
-	{
-		close(client.fd_write);
-		close(client.fd_read);
-		client.action = ACTION_NORMAL;
-		client._update_stat(RESPONSE | ERROR, 502);
-		process_client(client.fd);
-		return ;
-	}
+//	if ((_event_list[i].flags & EV_EOF) && (_event_list[i].data == 0))
+//	{
+//		close(client.fd_write);
+//		close(client.fd_read);
+//		client.action = ACTION_NORMAL;
+//		client._update_stat(RESPONSE | ERROR, 502);
+//		process_client(client.fd);
+//		return ;
+//	}
 	char buffer[SIZE_BUFF];
 	/* WE MUST CHECK EV_EOF BEFORE READING */
 	int nb_read = read(client.fd_read, buffer, SIZE_BUFF);
@@ -242,6 +245,7 @@ void Worker::write_client(int i)
 		client.action = ACTION_NORMAL;
 		client._update_stat(RESPONSE | ERROR, 502);
 		process_client(client.fd);
+		std::cout << "EV_ERROR\n";
 		return ;
 	}
 	if (client.action == ACTION_CGI)
@@ -253,6 +257,7 @@ void Worker::write_client(int i)
 			client.action = ACTION_NORMAL;
 			client._update_stat(RESPONSE | ERROR, 502);
 			process_client(client.fd);
+			std::cout << "WAITPID\n";
 			return ;
 		}
 		size_write = std::min(client.request.body.size(), (size_t)_event_list[i].data);
@@ -395,6 +400,7 @@ void Worker::event_loop(void)
 		/* We have at least one event registered per client and at most four
 		 * for CGI cases, we setup event_list to receive at most three times
 		 * socket_client size, the up average */
-		_event_list.resize(_socket_clients.size() * 3 + _socket_servers.size());
+		//_event_list.resize(_socket_clients.size() * 3 + _socket_servers.size());
+		_event_list.resize(100000);
 	}
 }

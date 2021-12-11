@@ -3,12 +3,10 @@
 const std::string Master::_DEFAULT_CONF = "default.conf";
 
 Master::Master(std::string const & file_conf) : _file_conf(file_conf), _servers(), _socket_servers() { 
-	std::cout << "Master()" << "\n";
 }
 
 void Master::init() {
-	std::cout << "init()" << "\n";
-
+	
 	add_status_msgs();
 	add_default_pages();
 	add_mime_types();
@@ -16,9 +14,15 @@ void Master::init() {
 	// choose file
 	if (_file_conf.empty())
 		_file_conf = _DEFAULT_CONF;
+
+	std::cout << "Load file config ["<< _file_conf << "]\n";
+
 	std::ifstream ifs (_file_conf);
-	if(!ifs.good())
-		throw std::runtime_error(strerror(errno));
+	if(!ifs.is_open()) {
+		std::cerr << "Error opening file : " << strerror(errno) << "\n";
+		exit(0);
+	}
+
 	Loader loader(ifs);
 	try {
 		loader.add_servers(_servers);
@@ -27,6 +31,10 @@ void Master::init() {
 		exit(0);
 	}
 
+#ifdef DEBUG	
+	for (std::vector<Server>::const_iterator it = servers.begin(); it != servers.end(); ++it)
+		it->what();
+#endif
 	//create socket_srevers
 
 	std::set<std::pair<std::string, std::string> > listens;
@@ -53,6 +61,7 @@ void Master::_add_servers(Socket_server & socket_server) {
 
 
 void Master::work() {
+	std::cout << "Start webserv 1.20.1\n";
 	for(std::map<int, Socket_server>::iterator it = _socket_servers.begin(); it !=_socket_servers.end(); it++)
 		it->second.listen_();
 	Worker worker(_socket_servers);
