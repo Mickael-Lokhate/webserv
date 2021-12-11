@@ -385,6 +385,7 @@ void Socket_client::process_request_line()
 								found + 1 - (request.method.size() + spaces));
 	if (!is_valid_uri()) 
 		return _update_stat(ROUTE | ERROR, 400);
+	std::cout << buffer_recv.substr(0,buffer_recv.find(request.delim)) << " [" << fd << "] " << addr << ":" << port << "\n"; 
 	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
 }

@@ -15,7 +15,7 @@
 #include "Socket_client.hpp"
 
 /* Timeouts */
-#define TO_HEADERS 1160
+#define TO_HEADERS 1111
 #define TO_BODY 1115
 #define TO_RESPONSE 1118
 #define TO_SEND 1115

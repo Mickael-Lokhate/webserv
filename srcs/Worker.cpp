@@ -53,8 +53,9 @@ void Worker::new_client(int i)
 	int 				new_client;
 	struct sockaddr_in	from;
 	socklen_t			slen;
-	int					max_back = 64;
-
+	int					max_back = 20;
+	
+	(void)max_back;
 	if (_event_list[i].flags & EV_EOF)
 		/* returns the socket error (if any) in fflags */
 		throw std::runtime_error(std::string(strerror(_event_list[i].fflags)));
@@ -63,14 +64,13 @@ void Worker::new_client(int i)
 	std::cout << "[Worker] -   Backlog : " << _event_list[i].data << "\n";
 #endif
 	/* data contains the size of the listen backlog. */
-	while (_event_list[i].data-- && max_back--)
+	while (_event_list[i].data--)
 	{
 		if ((new_client = accept(_event_list[i].ident,
 						(struct sockaddr *)&from, &slen)) == -1)
 			throw std::runtime_error(std::string(strerror(errno)));
 		/* Setup client's timeout for request line and headers */
-		update_modif_list(new_client, EVFILT_TIMER,
-			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
+		update_modif_list(new_client, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
 		update_modif_list(new_client, EVFILT_READ, EV_ADD);
 		/* Store client's addr and port as string */
 		char		buffer[INET_ADDRSTRLEN];
@@ -101,7 +101,6 @@ void Worker::recv_client(int i)
 	}
 #ifdef DEBUG
 	std::cout << "[Worker] -  recv client -> ";
-	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to read";
 	std::cout << "\n";
 #endif 
@@ -109,7 +108,6 @@ void Worker::recv_client(int i)
 	/* After receiving data, we register a user event to wakeup process_client */
 	if (!(client.state & RESPONSE) && !(client.state & READY))
 		process_client(client.fd);
-
 }
 
 
@@ -132,10 +130,9 @@ void Worker::send_client(int i)
 		del_client(i);
 		throw std::runtime_error(std::string(strerror(errno)));
 	}
-	update_modif_list(client.fd, EVFILT_TIMER,
-			EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);
+	update_modif_list(client.fd, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);
 	if ((size_t)size_send < client.buffer_send.size())
-		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT | EV_CLEAR);
+		update_modif_list(client.fd, EVFILT_WRITE, EV_ONESHOT);
 	client.buffer_send.erase(0, size_send);
 	if (client.buffer_send.empty() && client.response.read_end)
 	{
@@ -144,8 +141,7 @@ void Worker::send_client(int i)
 		else {
 			client.clean();
 			/* Setup client's timeout for sending back data */
-			update_modif_list(client.fd, EVFILT_TIMER,
-					EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
+			update_modif_list(client.fd, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
 			if (!client.buffer_recv.empty()) 
 				process_client(client.fd);
 		}
@@ -309,12 +305,12 @@ void Worker::process_client(int fd_client)
 		if (client.state & BODY) 
 		{
 			update_modif_list(client.fd, EVFILT_TIMER,
-				EV_ADD, NOTE_SECONDS, TO_BODY);
+				EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_BODY);
 			client.process_body();
 		}
 		if (client.state & RESPONSE) {
 			update_modif_list(client.fd, EVFILT_TIMER,
-					EV_ADD, NOTE_SECONDS, TO_RESPONSE);
+					EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_RESPONSE);
 			if (client.closed)
 				update_modif_list(client.fd, EVFILT_READ, EV_DELETE);
 		}
@@ -332,7 +328,7 @@ void Worker::process_client(int fd_client)
 	}
 	if(client.state == READY) {
 		client.fetch_response();
-		update_modif_list(client.fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT | EV_CLEAR);
+		update_modif_list(client.fd, EVFILT_WRITE, EV_ONESHOT);
 	}
 }
 
