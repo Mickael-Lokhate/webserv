@@ -9,10 +9,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#define STRDEBUG(MSG) std::string(__FUNCTION__) + " : " + MSG + " ("  + std::string(__FILE__) + ":" + std::to_string(__LINE__) + ")"
-
-#define STRDEBUG0 std::string(__FUNCTION__) + " : " + strerror(errno) + " ("  + std::string(__FILE__) + ":" + std::to_string(__LINE__) + ")"
-
 #define SPACE 1
 #define COLON 1
 #define CRLF "\r\n"

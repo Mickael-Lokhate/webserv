@@ -311,7 +311,7 @@ void Socket_client::_update_stat(int _state, short _status)
 #ifdef LOG
 	if ((_state & ROUTE) && (_state & ERROR))
 		std::cout << "\""<< buffer_recv.substr(0,buffer_recv.find(request.delim)) 
-			<< "\" [" << fd << "] " << addr << ":" << port << "\n"; 
+			<< "\" [" << addr << ":" << port << "]\n"; 
 #endif
 	static short closed_status[] = {400, 501, 415, 505, 413, 414, 431, 500};
 	static const int size = (sizeof(closed_status)/sizeof(short));
@@ -393,7 +393,7 @@ void Socket_client::process_request_line()
 		return _update_stat(ROUTE | ERROR, 400);
 #ifdef LOG
 	std::cout << "\""<< buffer_recv.substr(0,buffer_recv.find(request.delim)) 
-		<< "\" [" << fd << "] " << addr << ":" << port << "\n"; 
+		<< "\" [" << addr << ":" << port << "]\n"; 
 #endif
 	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
@@ -862,7 +862,7 @@ void Socket_client::process_header_response()
 		process_header_CGI();
 #ifdef LOG
 	std::cout << "\""<< buffer_send.substr(0,buffer_send.find(CRLF)) 
-		<< "\" [" << fd << "] " << addr << ":" << port << "\n"; 
+		<< "\" [" << addr << ":" << port << "]\n"; 
 #endif
 }
 
@@ -878,7 +878,7 @@ void Socket_client::_process_cgi() {
 		_setup_cgi();
 		_exec_cgi(); 
 	}
-	catch (...) 
+	catch (std::exception & e) 
 	{
 		return _set_error(500);
 	}
@@ -1048,7 +1048,7 @@ void Socket_client::_process_get_head(std::string& path)
 			return _set_error(500);
 		if (route.autoindex.compare("on") == 0) {
 			try { generate_directory_listing(); }
-			catch (...) { _set_error(500); }
+			catch (std::exception & e) { _set_error(500); }
 			return ;
 		}
 		if (!route.index.empty())
@@ -1080,6 +1080,7 @@ std::string Socket_client::_process_build_path()
 	}
 	if (action != ACTION_CGI && _is_dir(path.c_str()) && *(path.end() - 1) != '/')
 			path.push_back('/');
+	server->_delete_duplicate_slash(path);
 	return path;
 }
 
