@@ -15,16 +15,18 @@ Socket_client & Worker::retrieve_client(long i)
 Worker::Worker(const std::map<int, Socket_server> & socket_servers) :
 	_socket_servers(socket_servers)
 {
+	static int const MAX_EVENT = 20;
 	std::map<int, Socket_server>::iterator last = _socket_servers.end();
 	std::map<int, Socket_server>::iterator it = _socket_servers.begin();
 
 	/* resize vectors for first kevent loop */
-	_event_list.resize(_socket_servers.size());
+	_event_list.resize(_socket_servers.size() + MAX_EVENT);
 	_modif_list.resize(_socket_servers.size());
 	/* register listeners */
 	for (int i = 0; it != last; it++)
 		EV_SET(&(_modif_list[i++]), it->second.fd,
 				EVFILT_READ, EV_ADD, 0, 0, NULL);
+
 }
 
 Worker::Worker(const Worker & ref)
@@ -98,21 +100,19 @@ void Worker::new_client(int i)
 
 void Worker::recv_client(int i)
 {
-#ifdef DEBUG
-	std::cout << "[Worker] -  recv client : \n";
-#endif 
-	char			buffer[_event_list[i].data];
+	char	buffer[_event_list[i].data];
 	Socket_client & client = retrieve_client(_event_list[i].ident);
+#ifdef DEBUG
+	std::cout << "[Worker] -  recv client -> ";
+	client.what();
+	std::cout << ", " << _event_list[i].data << " bytes to read";
+	std::cout << "\n";
+#endif 
 	if (read(client.fd, buffer, _event_list[i].data) == -1)
 	{
 		del_client(i);
 		throw std::runtime_error(std::string(strerror(errno)));
 	}
-#ifdef DEBUG
-	client.what();
-	std::cout << ", " << _event_list[i].data << " bytes to read";
-	std::cout << "\n";
-#endif 
 	client.buffer_recv.append(buffer, _event_list[i].data);
 	/* After receiving data, we register a user event to wakeup process_client */
 	if (!(client.state & RESPONSE) && !(client.state & READY))
@@ -122,15 +122,10 @@ void Worker::recv_client(int i)
 
 void Worker::send_client(int i)
 {
-#ifdef DEBUG
-	std::cout << "[Worker] -  send client : \n";
-#endif 
 	ssize_t			size_send;
 	Socket_client & client = retrieve_client(_event_list[i].ident);
-	if (client.fd == -1)
-		std::cout << "error" << std::endl;
-
 #ifdef DEBUG
+	std::cout << "[Worker] -  send client -> ";
 	client.what();
 	std::cout << ", " << client.buffer_send.size() << " bytes to send, ";
 	std::cout << _event_list[i].data << " bytes in pipe";
@@ -162,16 +157,11 @@ void Worker::send_client(int i)
 
 void Worker::del_client(int i)
 {
+	Socket_client & client = retrieve_client(_event_list[i].ident);
 #ifdef DEBUG
 	std::cout << "[Worker] -   " << 
 	((_event_list[i].filter == EVFILT_TIMER) ? "TO" : "del") 
-	<< " client : \n";
-#endif
-	Socket_client & client = retrieve_client(_event_list[i].ident);
-	if (client.fd == -1)
-		std::cout << "error" << std::endl;
-		;
-#ifdef DEBUG
+	<< " client -> ";
 	client.what();
 	std::cout << "\n";
 #endif 
@@ -188,11 +178,9 @@ void Worker::del_client(int i)
 void Worker::read_client(int i)
 {
 	int const NB_READ = 128 * 1024;
-#ifdef DEBUG
-	std::cout << "[Worker] -   Read client : ";
-#endif 
 	Socket_client & client = retrieve_client((long)_event_list[i].udata);
 #ifdef DEBUG
+	std::cout << "[Worker] -   Read client -> ";
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to read\n";
 #endif 
@@ -236,7 +224,11 @@ void Worker::read_client(int i)
 		waitpid(client.cgi.pid, &client.cgi.exit_code, WNOHANG);	
 		client.response.read_end = true;
 		client.state = READY;
-		process_client(client.fd);
+		try {
+			process_client(client.fd);
+		} catch (std::exception & e) {
+			process_client(client.fd);
+		}
 		return ;
 	}
 	if (size_read == NB_READ)
@@ -249,12 +241,10 @@ void Worker::read_client(int i)
 // upload 
 void Worker::write_client(int i)
 {
-#ifdef DEBUG
-	std::cout << "[Worker] -   Write client : \n";
-#endif 
 	Socket_client & client = retrieve_client((long)_event_list[i].udata);
 	ssize_t			size_write = client.request.body.size();
 #ifdef DEBUG
+	std::cout << "[Worker] -   Write client -> ";
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to write\n";
 #endif 
@@ -311,13 +301,9 @@ void Worker::write_client(int i)
 
 void Worker::process_client(int fd_client)
 {
-	#ifdef DEBUG
-		std::cout << "[Worker] -   process client : \n";
-	#endif 
-
 	Socket_client & client = retrieve_client(fd_client);
-
 	#ifdef DEBUG
+		std::cout << "[Worker] -   process client -> ";
 		client.what();
 		std::cout << "\n";
 	#endif 
@@ -362,7 +348,9 @@ void Worker::process_client(int fd_client)
 static void handler(int num)
 {
 	(void)num;
+#ifdef DEBUG
 	std::cerr << "SIGPIPE\n"; 
+#endif
 }
 
 void Worker::event_loop(void)
@@ -429,9 +417,5 @@ void Worker::event_loop(void)
 				std::cerr << "Worker::event_loop: " << e.what() << std::endl;
 			}
 		}
-		/* We have at least one event registered per client and at most four
-		 * for CGI cases, we setup event_list to receive at most three times
-		 * socket_client size, the up average */
-		_event_list.resize(20);
 	}
 }

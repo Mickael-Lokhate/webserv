@@ -160,14 +160,6 @@ void Socket_client::generate_directory_listing(void)
 	response.read_end = true;
 }
 
-static void _abort(void)
-{
-#ifdef DEBUG 
-	std::cerr << "[Cgi] - child: " << std::string(strerror(errno)) << std::endl;
-#endif 
-	_exit(EXIT_FAILURE);
-}
-
 void Socket_client::_setup_cgi()
 {
 	std::map<std::string, std::string>::iterator ct =
@@ -280,14 +272,23 @@ void Socket_client::_exec_cgi(void)
 		 * ALL currently opens fd.. */
 		cgi.close_pipe_cgi_side();
 		if (dup2(cgi.input[0], STDIN_FILENO)   == -1 ||
-			dup2(cgi.output[1], STDOUT_FILENO) == -1)
-			_abort();
+			dup2(cgi.output[1], STDOUT_FILENO) == -1) 
+		{
+			#ifdef DEBUG 
+			std::cerr << "[Cgi] - child dup : " << std::string(strerror(errno)) << std::endl;
+			#endif 
+			_exit(EXIT_FAILURE);
+		}
 		if (execve(route.cgi.c_str(), (char *[]){route.cgi.begin().base(),
 			exe.begin().base(), NULL},
-			cgi.envp.begin().base()) == -1)
-			_abort();
-		close(0);
-		close(1);
+			cgi.envp.begin().base()) == -1) 
+		{
+			#ifdef DEBUG 
+			std::cerr << "[Cgi] - child exceve : " << std::string(strerror(errno)) << std::endl;
+			#endif 
+			_exit(EXIT_FAILURE);
+		}
+	
 	}
 	cgi.close_pipe_worker_side();
 	cgi.pid = pid;
@@ -307,6 +308,11 @@ const std::string & Socket_client::check_method() {
 
 void Socket_client::_update_stat(int _state, short _status)
 {
+#ifdef LOG
+	if ((_state & ROUTE) && (_state & ERROR))
+		std::cout << "\""<< buffer_recv.substr(0,buffer_recv.find(request.delim)) 
+			<< "\" [" << fd << "] " << addr << ":" << port << "\n"; 
+#endif
 	static short closed_status[] = {400, 501, 415, 505, 413, 414, 431, 500};
 	static const int size = (sizeof(closed_status)/sizeof(short));
 	response.status = _status;
@@ -385,7 +391,10 @@ void Socket_client::process_request_line()
 								found + 1 - (request.method.size() + spaces));
 	if (!is_valid_uri()) 
 		return _update_stat(ROUTE | ERROR, 400);
-	std::cout << buffer_recv.substr(0,buffer_recv.find(request.delim)) << " [" << fd << "] " << addr << ":" << port << "\n"; 
+#ifdef LOG
+	std::cout << "\""<< buffer_recv.substr(0,buffer_recv.find(request.delim)) 
+		<< "\" [" << fd << "] " << addr << ":" << port << "\n"; 
+#endif
 	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
 }
@@ -807,8 +816,9 @@ void Socket_client::process_header_CGI()
 	{
 		/* error_page does not apply to CGI response so 
 		 * we mustn't go throw process_response */
-		state |= ERROR;
-		return _set_error(502);
+		action = ACTION_NORMAL;
+		_update_stat(RESPONSE | ERROR, 502);
+		throw std::exception();
 	}
 	else 
 		_extract_cgi_headers(cgi_headers, delim, response, found);
@@ -817,8 +827,9 @@ void Socket_client::process_header_CGI()
 	{
 		/* error_page does not apply to CGI response so 
 		 * we mustn't go throw process_response */
-		state |= ERROR;
-		return _set_error(502);
+		action = ACTION_NORMAL;
+		_update_stat(RESPONSE | ERROR, 502);
+		throw std::exception();
 	}
 	/* make a valid HTTP response from CGI output */
 	_populate_headers_CGI(cgi_headers);
@@ -827,10 +838,16 @@ void Socket_client::process_header_CGI()
 		it != cgi_headers.end(); it++)
 		buffer_send.append(it->first + ": " + it->second + CRLF);
 	buffer_send.append(std::string("Server: ") + WEBSERV_V + CRLF);
-	if (gettimeofday(&now, NULL) == -1)
-		throw std::runtime_error(strerror(errno));
-	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
-		throw std::runtime_error("strftime");
+	if (gettimeofday(&now, NULL) == -1) {
+		action = ACTION_NORMAL;
+		_update_stat(RESPONSE | ERROR, 500);
+		throw std::exception();
+	}
+	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec))) {
+		action = ACTION_NORMAL;
+		_update_stat(RESPONSE | ERROR, 500);
+		throw std::exception();
+	}
 	buffer_send.append(std::string("Date: ") + buf + CRLF);
 	buffer_send.append(std::string("Connection: ") +
 			(closed ? "closed" : "keep-alive") + CRLF + CRLF);
@@ -839,18 +856,14 @@ void Socket_client::process_header_CGI()
 
 void Socket_client::process_header_response()
 {
-	try
-	{
-		if (action != ACTION_CGI)
-			process_header_generic();
-		else 
-			process_header_CGI();
-	}
-	catch (...) 
-	{ 
-		state |= ERROR;
-		return _set_error(500); 
-	}
+	if (action != ACTION_CGI)
+		process_header_generic();
+	else 
+		process_header_CGI();
+#ifdef LOG
+	std::cout << "\""<< buffer_send.substr(0,buffer_send.find(CRLF)) 
+		<< "\" [" << fd << "] " << addr << ":" << port << "\n"; 
+#endif
 }
 
 void Socket_client::fetch_response()
@@ -867,7 +880,6 @@ void Socket_client::_process_cgi() {
 	}
 	catch (...) 
 	{
-		state |= ERROR;
 		return _set_error(500);
 	}
 	state |= NEED_WRITE;

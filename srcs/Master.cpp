@@ -68,14 +68,13 @@ void Master::work() {
 #endif
 		try { worker.event_loop(); } 
 		catch (std::exception & e) { 
-			std::cerr << "kevent error : " << e.what() << "\n";
+			std::cerr << "kqueue/kevent error : " << e.what() << "\n";
 		}
 	}
 }
 
 void Master::what() const {
 
-	// affiche file_conf
 	std::cout << "_DEFAULT_CONF: " << _DEFAULT_CONF << "\n";
 	std::cout << "_file_conf: " << _file_conf << "\n";
 

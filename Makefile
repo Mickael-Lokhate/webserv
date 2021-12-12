@@ -2,7 +2,7 @@ CXX			= clang++
 NAME		= webserv
 SRC			= $(wildcard srcs/*.cpp)
 OBJ			= $(SRC:.cpp=.o)
-CXXFLAGS	= -I./inc -std=c++98 -Wall -Wextra -g -Werror
+CXXFLAGS	= -I./inc -std=c++98 -Wall -Wextra -g  -Werror -D LOG
 
 ifdef DEBUG
 CXXFLAGS	+= -D DEBUG
