@@ -12,8 +12,23 @@
 #define SPACE 1
 #define COLON 1
 #define CRLF "\r\n"
-#define SIZE_BUFF 0x2000
 #define WEBSERV_V "webserv/1.20.1"
+
+/* Kevent */
+#define MAX_BACK 32
+#define MAX_EVENT 16
+
+/* Size buffers */
+#define SIZE_CH 0x1FF8
+#define SIZE_BUFF 0x2000
+#define NB_READ 0x20000
+
+/* Timeouts */
+#define TO_HEADERS 480
+#define TO_BODY 480
+#define TO_RESPONSE 480
+#define TO_SEND 480
+
 
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);

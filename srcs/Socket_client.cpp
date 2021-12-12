@@ -677,7 +677,6 @@ void Socket_client::process_body_response()
 {
 	std::string size_str;
 	size_t	size_chunked;
-	const int SIZE_CH = 8184;
 
 	if (response.chunked) {
 		while(!response.body.empty()) {

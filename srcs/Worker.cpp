@@ -15,7 +15,6 @@ Socket_client & Worker::retrieve_client(long i)
 Worker::Worker(const std::map<int, Socket_server> & socket_servers) :
 	_socket_servers(socket_servers)
 {
-	static int const MAX_EVENT = 20;
 	std::map<int, Socket_server>::iterator last = _socket_servers.end();
 	std::map<int, Socket_server>::iterator it = _socket_servers.begin();
 
@@ -63,7 +62,7 @@ void Worker::new_client(int i)
 	int 				new_client;
 	struct sockaddr_in	from;
 	socklen_t			slen;
-	int					max_back = 32;
+	int					max_back = MAX_BACK;
 	
 	if (_event_list[i].flags & EV_EOF)
 		/* returns the socket error (if any) in fflags */
@@ -177,32 +176,23 @@ void Worker::del_client(int i)
 
 void Worker::read_client(int i)
 {
-	int const NB_READ = 128 * 1024;
 	Socket_client & client = retrieve_client((long)_event_list[i].udata);
 #ifdef DEBUG
 	std::cout << "[Worker] -   Read client -> ";
 	client.what();
 	std::cout << ", " << _event_list[i].data << " bytes to read\n";
 #endif 
-//	if ((_event_list[i].flags & EV_EOF) && (_event_list[i].data == 0))
-//	{
-//		close(client.fd_write);
-//		close(client.fd_read);
-//		client.action = ACTION_NORMAL;
-//		client._update_stat(RESPONSE | ERROR, 502);
-//		process_client(client.fd);
-//		return ;
-//	}
 	ssize_t nb_read = NB_READ;
 	if (client.action == ACTION_CGI)
 		nb_read = _event_list[i].data; 	
+
 	char buffer[nb_read];
-	/* WE MUST CHECK EV_EOF BEFORE READING */
 	ssize_t size_read = read(client.fd_read, buffer, nb_read);
 
 	if (size_read == -1) {
 		client._update_stat(RESPONSE | ERROR, 500);
 		close(client.fd_read);
+		client.fd_read = -1;
 		process_client(client.fd);
 		return ;	
 	}
@@ -212,6 +202,7 @@ void Worker::read_client(int i)
 		if (size_read == _event_list[i].data)
 		{
 			close(client.fd_read);
+			client.fd_read = -1;
 			client.response.read_end = true;
 			client.state = READY;
 			process_client(client.fd);
@@ -221,6 +212,7 @@ void Worker::read_client(int i)
 	else if (_event_list[i].flags & EV_EOF)
 	{
 		close(client.fd_read);
+		client.fd_read = -1;
 		waitpid(client.cgi.pid, &client.cgi.exit_code, WNOHANG);	
 		client.response.read_end = true;
 		client.state = READY;
@@ -253,10 +245,11 @@ void Worker::write_client(int i)
 	{
 		close(client.fd_write);
 		close(client.fd_read);
+		client.fd_read = -1;
+		client.fd_write = -1;
 		client.action = ACTION_NORMAL;
 		client._update_stat(RESPONSE | ERROR, 502);
 		process_client(client.fd);
-		std::cout << "EV_ERROR\n";
 		return ;
 	}
 	if (client.action == ACTION_CGI)
@@ -265,10 +258,11 @@ void Worker::write_client(int i)
 		{
 			close(client.fd_write);
 			close(client.fd_read);
+			client.fd_read = -1;
+			client.fd_write = -1;
 			client.action = ACTION_NORMAL;
 			client._update_stat(RESPONSE | ERROR, 502);
 			process_client(client.fd);
-			std::cout << "WAITPID\n";
 			return ;
 		}
 		size_write = std::min(client.request.body.size(), (size_t)_event_list[i].data);
@@ -276,6 +270,7 @@ void Worker::write_client(int i)
 	size_write = write(client.fd_write, client.request.body.c_str(), size_write);
 	if (size_write == -1) {
 		close(client.fd_write);
+		client.fd_write = -1;
 		if (client.action != ACTION_CGI) {
 			client._update_stat(RESPONSE | ERROR, 500);
 			process_client(client.fd);
@@ -291,6 +286,7 @@ void Worker::write_client(int i)
 		client.state &= ~NEED_WRITE;
 		client.request.body.clear();
 		close(client.fd_write);
+		client.fd_write = -1;
 		if(client.action != ACTION_CGI) {
 			client.state = READY;
 			client.response.read_end = true;
