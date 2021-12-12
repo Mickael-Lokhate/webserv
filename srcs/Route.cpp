@@ -2,7 +2,7 @@
 
 Route::Route()
 {
-	root.first = "/www";
+	root.first = (getenv("HOME") ? getenv("HOME") : "") + std::string("/www");
 	root.second = false;
 	autoindex = "off";
 	max_body_size = "1000000";

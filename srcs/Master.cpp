@@ -19,15 +19,18 @@ void Master::init() {
 
 	std::ifstream ifs (_file_conf);
 	if(!ifs.is_open()) {
-		std::cerr << "Error opening file : " << strerror(errno) << "\n";
+		std::cerr << "Error opening file config : " << strerror(errno) << "\n";
 		exit(1);
 	}
-
 	Loader loader(ifs);
 	try {
 		loader.add_servers(_servers);
 	} catch (std::exception const & e) {
 		std::cerr << "Error : " << e.what() << "\n";
+		exit(1);
+	}
+	if (_servers.empty()) {
+		std::cerr << "Error : Any correct server in file config\n";
 		exit(1);
 	}
 
