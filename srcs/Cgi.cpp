@@ -5,7 +5,7 @@ std::string Cgi::request_scheme = "REQUEST_SCHEME=http";
 std::string Cgi::gateway_interface = "GATEWAY_INTERFACE=CGI/1.1";
 std::string Cgi::server_software = "SERVER_SOFTWARE=webserv/v2";
 
-Cgi::Cgi(void)
+Cgi::Cgi(void) : pid(-1)
 {
 	;
 }

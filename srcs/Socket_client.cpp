@@ -38,11 +38,13 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	addr = ref.addr;
 	port = ref.port;
 	state = ref.state;
-	request = Request();
+	cgi = ref.cgi;
+	request = ref.request;
 	response = ref.response;
 	route = ref.route;
 	socket_server = ref.socket_server;
 	fd_read = ref.fd_read;
+	server = ref.server;
 	fd_write = ref.fd_write;
 	action = ref.action;
 	closed = ref.closed;
@@ -523,7 +525,6 @@ bool Socket_client::get_ckunked_body() {
 	while (!end) {
 		if ((pos_delim = buffer_recv.find(request.delim, cursor)) == std::string::npos) 
 			break;
-		// taille
 		size_chunck = _hexstr_to_ssize(buffer_recv.substr(cursor, pos_delim));
 		if (size_chunck < 0)
 			throw std::logic_error("error chunked : hexa size");

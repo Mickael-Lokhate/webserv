@@ -43,6 +43,9 @@ class Worker {
 	void	process_client(int i);
 	void	read_client(int i);
 	void	write_client(int i);
+	bool 	ignore_event(int i);
+
+	void	abort_write(Socket_client & client);
 	
 	std::vector<struct kevent>		_event_list;
 	std::vector<struct kevent>		_modif_list;

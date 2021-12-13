@@ -26,8 +26,8 @@
 /* Timeouts */
 #define TO_HEADERS 480
 #define TO_BODY 480
-#define TO_RESPONSE 3
-#define TO_SEND 3
+#define TO_RESPONSE 480
+#define TO_SEND 480
 
 
 

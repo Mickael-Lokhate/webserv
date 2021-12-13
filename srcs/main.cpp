@@ -1,9 +1,3 @@
-//#include "Worker.hpp"
-//#include "Worker.hpp"
-//#include "Socket_server.hpp"
-//#include <iostream>
-//#include <map>
-//#include <vector>
 #include "Master.hpp"
 
 int main(int ac, char **av)

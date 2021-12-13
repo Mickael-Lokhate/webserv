@@ -243,6 +243,17 @@ void Worker::read_client(int i)
 	}
 }
 
+void Worker::abort_write(Socket_client & client) 
+{
+	close(client.fd_write);
+	close(client.fd_read);
+	client.fd_read = -1;
+	client.fd_write = -1;
+	client.action = ACTION_NORMAL;
+	client._update_stat(RESPONSE | ERROR, 502);
+	process_client(client.fd);
+}
+
 // upload 
 void Worker::write_client(int i)
 {
@@ -256,13 +267,7 @@ void Worker::write_client(int i)
 
 	if (_event_list[i].flags & EV_ERROR)
 	{
-		close(client.fd_write);
-		close(client.fd_read);
-		client.fd_read = -1;
-		client.fd_write = -1;
-		client.action = ACTION_NORMAL;
-		client._update_stat(RESPONSE | ERROR, 502);
-		process_client(client.fd);
+		abort_write(client);
 		return ;
 	}
 	if (client.action == ACTION_CGI)
@@ -270,13 +275,7 @@ void Worker::write_client(int i)
 		if (waitpid(client.cgi.pid, &client.cgi.exit_code, WNOHANG) == client.cgi.pid)
 		{
 			client.cgi.pid = -1;
-			close(client.fd_write);
-			close(client.fd_read);
-			client.fd_read = -1;
-			client.fd_write = -1;
-			client.action = ACTION_NORMAL;
-			client._update_stat(RESPONSE | ERROR, 502);
-			process_client(client.fd);
+			abort_write(client);
 			return ;
 		}
 		size_write = std::min(client.request.body.size(), (size_t)_event_list[i].data);
@@ -301,7 +300,7 @@ void Worker::write_client(int i)
 		client.request.body.clear();
 		close(client.fd_write);
 		client.fd_write = -1;
-		if(client.action != ACTION_CGI) {
+		if (client.action != ACTION_CGI) {
 			client.state = READY;
 			client.response.read_end = true;
 			process_client(client.fd);
@@ -355,6 +354,17 @@ void Worker::process_client(int fd_client)
 	}
 }
 
+bool Worker::ignore_event(int i)
+{
+	if (_closed_clients.find(_event_list[i].ident) != _closed_clients.end())
+	   return true;	
+	if(_event_list[i].udata && _socket_clients.find((long)_event_list[i].udata) == _socket_clients.end())
+		return true;
+	if(!(_event_list[i].udata) &&  _socket_clients.find(_event_list[i].ident) == _socket_clients.end())
+		return true;
+	return false;
+}
+
 void Worker::event_loop(void)
 {
 	int					kq;
@@ -378,24 +388,17 @@ void Worker::event_loop(void)
 		{
 			try 
 			{ 
-				/* nouvelle connexion client */
 				if (_socket_servers.find(_event_list[i].ident) != last)
 					new_client(i);
 				else
 				{
-					if (_closed_clients.find(_event_list[i].ident) != _closed_clients.end())
-					   continue;	
-					else if(_event_list[i].udata && _socket_clients.find((long)_event_list[i].udata) == _socket_clients.end())
+					if (ignore_event(i))
 						continue ;
-					else if(!(_event_list[i].udata) &&  _socket_clients.find(_event_list[i].ident) == _socket_clients.end())
-						continue ;
-					/* fin de connexion client */
 					else if  (!(_event_list[i].udata) && 
 							(_event_list[i].flags & EV_EOF || _event_list[i].filter == EVFILT_TIMER))
 						del_client(i);
 					else
 					{
-						/* réception client */
 						if (_event_list[i].filter == EVFILT_READ)
 						{
 							if (_event_list[i].udata)
@@ -403,7 +406,6 @@ void Worker::event_loop(void)
 							else
 								recv_client(i);
 						}
-						/* émission client */
 						else if (_event_list[i].filter == EVFILT_WRITE)
 						{
 							if (_event_list[i].udata)
