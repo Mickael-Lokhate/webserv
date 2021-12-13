@@ -341,20 +341,12 @@ void Worker::process_client(int fd_client)
 	}
 }
 
-static void handler(int num)
-{
-	(void)num;
-#ifdef DEBUG
-	std::cerr << "SIGPIPE\n"; 
-#endif
-}
-
 void Worker::event_loop(void)
 {
 	int					kq;
 	std::map<int, Socket_server>::iterator last = _socket_servers.end();
 
-	signal(SIGPIPE, handler);
+	signal(SIGPIPE, SIG_IGN);
 	if ((kq = kqueue()) == -1)
 		throw std::runtime_error(std::string(strerror(errno)));
 	while (1)

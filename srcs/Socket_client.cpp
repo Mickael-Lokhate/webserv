@@ -279,6 +279,7 @@ void Socket_client::_exec_cgi(void)
 			#endif 
 			_exit(EXIT_FAILURE);
 		}
+		_clean_fd_table();
 		if (execve(route.cgi.c_str(), (char *[]){route.cgi.begin().base(),
 			exe.begin().base(), NULL},
 			cgi.envp.begin().base()) == -1) 
