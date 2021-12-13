@@ -9,14 +9,27 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#define STRDEBUG(MSG) std::string(__FUNCTION__) + " : " + MSG + " ("  + std::string(__FILE__) + ":" + std::to_string(__LINE__) + ")"
-
-#define STRDEBUG0 std::string(__FUNCTION__) + " : " + strerror(errno) + " ("  + std::string(__FILE__) + ":" + std::to_string(__LINE__) + ")"
-
 #define SPACE 1
 #define COLON 1
 #define CRLF "\r\n"
+#define WEBSERV_V "webserv/1.20.1"
+
+/* Kevent */
+#define MAX_BACK 32
+#define MAX_EVENT 16
+
+/* Size buffers */
+#define SIZE_CH 0x1FF8
 #define SIZE_BUFF 0x2000
+#define NB_READ 0x20000
+
+/* Timeouts */
+#define TO_HEADERS 480
+#define TO_BODY 480
+#define TO_RESPONSE 480
+#define TO_SEND 480
+
+
 
 bool						is_number(const std::string& s);
 std::vector<std::string>	split(const std::string& to_split, char delim);
@@ -99,4 +112,5 @@ long		_stol(const std::string & str);
 void add_status_msgs();
 void add_default_pages();
 void add_mime_types();
+void _clean_fd_table(void);
 std::string _get_file_mime(std::string const & tmp_path);

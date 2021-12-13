@@ -1,3 +1,5 @@
+#include <iomanip>
+#include <sstream>
 #include "Socket_client.hpp"
 
 extern std::map<short, std::string> status_msgs;
@@ -36,11 +38,13 @@ Socket_client & Socket_client::operator=(const Socket_client & ref)
 	addr = ref.addr;
 	port = ref.port;
 	state = ref.state;
-	request = Request();
+	cgi = ref.cgi;
+	request = ref.request;
 	response = ref.response;
 	route = ref.route;
 	socket_server = ref.socket_server;
 	fd_read = ref.fd_read;
+	server = ref.server;
 	fd_write = ref.fd_write;
 	action = ref.action;
 	closed = ref.closed;
@@ -130,15 +134,16 @@ void Socket_client::generate_directory_listing(void)
 	response.body.append(sep);
 	while ((dp = readdir(dirp)) != NULL)
 	{
-		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
-			throw std::runtime_error("strftime");
 		std::string file = path + "/" + dp->d_name;
 		std::string link = request.uri;
+
 		if (*(link.end() - 1) != '/')
 			link += "/";
 		link += dp->d_name;
 		if (stat(file.c_str(), &inf) == -1)
 			throw std::runtime_error(strerror(errno));
+		if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&inf.st_mtimespec.tv_sec)))
+			throw std::runtime_error("strftime");
 		response.body.append("\t\t<tr><td valign=\"top\"><a href=\"" + link + "\">" +
 					/* Name */
 					std::string(dp->d_name) + "</a></td>" +
@@ -157,29 +162,13 @@ void Socket_client::generate_directory_listing(void)
 	response.read_end = true;
 }
 
-static void _abort(void)
-{
-#ifndef DEBUG 
-	std::cout << "[Cgi] - child: " << std::string(strerror(errno)) << std::endl;
-#endif 
-	_exit(EXIT_FAILURE);
-}
-
-std::string Socket_client::_real_path(const std::string & uri)
-{
-	if (route.root.second)
-		return std::string(route.root.first +
-				uri.substr(route.location.size(), uri.size()));
-	else
-		return std::string(route.root.first + uri); 
-}
-
 void Socket_client::_setup_cgi()
 {
 	std::map<std::string, std::string>::iterator ct =
 						request.headers.find("content-type");
 	std::map<std::string, std::string>::iterator co =
 						request.headers.find("cookie");
+	std::string real_path = _process_build_path();
 
 	cgi.content_type = "CONTENT_TYPE=" + (ct == request.headers.end() ?
 														"" : ct->second);
@@ -190,9 +179,9 @@ void Socket_client::_setup_cgi()
 	cgi.path_info = "PATH_INFO=" + request.uri;
 	cgi.query_string = "QUERY_STRING=" + request.query;
 	cgi.request_method = "REQUEST_METHOD=" + request.method;
-	cgi.path_translated = "PATH_TRANSLATED=" + _real_path(request.uri);
-	cgi.script_name = "SCRIPT_NAME=" + _real_path(request.uri);
-	cgi.script_name = "SCRIPT_FILENAME=" + _real_path(request.uri);
+	cgi.path_translated = "PATH_TRANSLATED=" + real_path;
+	cgi.script_name = "SCRIPT_NAME=" + real_path;
+	cgi.script_name = "SCRIPT_FILENAME=" + real_path;
 	cgi.request_uri = "REQUEST_URI=" + request.uri + "?" + request.query;
 	cgi.document_uri = "DOCUMENT_URI=" + request.uri;
 	cgi.remote_addr = "REMOTE_ADDR=" + addr;
@@ -211,7 +200,6 @@ void Socket_client::_setup_cgi()
 		if (header.find("HTTP-") == 0 || header.find("X-") == 0)
 		{
 			cgi.special_headers.push_back(std::string("HTTP_") + header);
-
 			std::string & back = cgi.special_headers.back();
 			for (size_t i = 0; i < back.size(); i++)
 				if (back[i] == '-')
@@ -286,12 +274,24 @@ void Socket_client::_exec_cgi(void)
 		 * ALL currently opens fd.. */
 		cgi.close_pipe_cgi_side();
 		if (dup2(cgi.input[0], STDIN_FILENO)   == -1 ||
-			dup2(cgi.output[1], STDOUT_FILENO) == -1)
-			_abort();
+			dup2(cgi.output[1], STDOUT_FILENO) == -1) 
+		{
+			#ifdef DEBUG 
+			std::cerr << "[Cgi] - child dup : " << std::string(strerror(errno)) << std::endl;
+			#endif 
+			_exit(EXIT_FAILURE);
+		}
+		_clean_fd_table();
 		if (execve(route.cgi.c_str(), (char *[]){route.cgi.begin().base(),
 			exe.begin().base(), NULL},
-			cgi.envp.begin().base()) == -1)
-			_abort();
+			cgi.envp.begin().base()) == -1) 
+		{
+			#ifdef DEBUG 
+			std::cerr << "[Cgi] - child exceve : " << std::string(strerror(errno)) << std::endl;
+			#endif 
+			_exit(EXIT_FAILURE);
+		}
+	
 	}
 	cgi.close_pipe_worker_side();
 	cgi.pid = pid;
@@ -299,10 +299,10 @@ void Socket_client::_exec_cgi(void)
 
 const std::string & Socket_client::check_method() {
 	static const std::string	methods[] = {
-		"GET", "POST", "PUT", "DELETE", "err"};
+		"GET", "POST", "PUT", "DELETE", "HEAD", "err"};
 	int i;
 
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 5; i++)
 		if (!buffer_recv.compare(0, methods[i].size(),
 								methods[i]))
 			break;
@@ -311,7 +311,12 @@ const std::string & Socket_client::check_method() {
 
 void Socket_client::_update_stat(int _state, short _status)
 {
-	static short closed_status[] = {400, 501, 505, 413, 414, 431};
+#ifdef LOG
+	if ((_state & ROUTE) && (_state & ERROR))
+		std::cout << "\""<< buffer_recv.substr(0,buffer_recv.find(request.delim)) 
+			<< "\" [" << addr << ":" << port << "]\n"; 
+#endif
+	static short closed_status[] = {400, 501, 415, 505, 413, 414, 431, 500, 504};
 	static const int size = (sizeof(closed_status)/sizeof(short));
 	response.status = _status;
 	state = _state;
@@ -320,6 +325,7 @@ void Socket_client::_update_stat(int _state, short _status)
 
 bool Socket_client::is_valid_uri() {
 	size_t pos;
+	
 	std::string tmp = _tolower(request.uri.substr(0, 8));
 	if ((tmp.compare(0, 7, "http://") == 0) || (tmp.compare(0, 8, "https://") == 0))
 	{
@@ -332,7 +338,8 @@ bool Socket_client::is_valid_uri() {
 		request.uri.erase(0, request.host.size());
 		request.headers["host"] = request.host;
 		request.host = "";
-	}
+	}else if (request.uri[0] != '/')
+			return false;
 	request.query = server->_delete_uri_variable(request.uri);
 	server->_delete_duplicate_slash(request.uri);
 	server->_remove_simple_dot(request.uri);
@@ -347,7 +354,8 @@ bool Socket_client::is_valid_uri() {
 /* request-line   = method SP request-target SP HTTP-version CRLF */
 void Socket_client::process_request_line()
 {
-	static const std::string	version = "HTTP/1.1";
+	static const std::string	numvers = "1.1";
+	static const std::string	version = " HTTP/";
 	size_t 						found;
 	size_t						spaces = 0;
 
@@ -368,34 +376,28 @@ void Socket_client::process_request_line()
 	}
 	request.method = check_method();
 	if (request.method == "err" || buffer_recv[request.method.size()] != ' ')
-	{
-		_update_stat(ROUTE | ERROR, 400);
-		return;
-	}
-	while (buffer_recv[request.method.size() + spaces] == ' ' )
-		++spaces;
-	found = buffer_recv.find(" ", request.method.size() + spaces);
-	if (found == std::string::npos) {
-		_update_stat(ROUTE | ERROR, 400);
-		return ;
-	}
-	request.uri = buffer_recv.substr(request.method.size() + spaces,
-		   					found - (request.method.size() + spaces));
-	if (!is_valid_uri()) {
-		_update_stat(ROUTE | ERROR, 400);
-		return ;
-	}
-	while (buffer_recv[request.method.size() +
-			request.uri.size() + spaces] == ' ' )
-		++spaces;
-	/* is this a HTTP/1.1 request ? */
-	found = buffer_recv.find(version, request.method.size() + request.uri.size() +
-							spaces);
-	if (found == std::string::npos)
-		return _update_stat(ROUTE | ERROR, 505);
-	/* did we analyse the all request line ? */
-	if 	(buffer_recv.compare(found + version.size(), request.delim.size(), request.delim)) 
 		return _update_stat(ROUTE | ERROR, 400);
+	while (buffer_recv[request.method.size() + spaces] == ' ')
+		++spaces;
+	/* is this a " HTTP/" request ? */
+	found = buffer_recv.find(version, request.method.size() + spaces);
+	if (found == std::string::npos)
+		return _update_stat(ROUTE | ERROR, 400);
+	/* is this a " HTTP/1.1" request ? */
+	if (buffer_recv.compare(found, version.size() + numvers.size() +
+				request.delim.size(), version + numvers + request.delim))
+		return _update_stat(ROUTE | ERROR, 505);
+	while (buffer_recv[--found] == ' ')
+		;
+	/* found start at index 0, we must add 1 to it because we mixed it with size */
+	request.uri = buffer_recv.substr(request.method.size() + spaces, 
+								found + 1 - (request.method.size() + spaces));
+	if (!is_valid_uri()) 
+		return _update_stat(ROUTE | ERROR, 400);
+#ifdef LOG
+	std::cout << "\""<< buffer_recv.substr(0,buffer_recv.find(request.delim)) 
+		<< "\" [" << addr << ":" << port << "]\n"; 
+#endif
 	buffer_recv.erase(0, buffer_recv.find(request.delim) + request.delim.size());
 	state = HEADERS;
 }
@@ -420,6 +422,11 @@ void Socket_client::process_headers()
 		{
 			if (!request.host.empty())
 			{
+				if (request.method == "DELETE" && 
+						(request.content_length != 0 || request.chunked)) {
+					_update_stat(RESPONSE | ERROR, 415);
+					return;
+				}
 				buffer_recv.erase(0, found + request.delim.size());
 				if (request.content_length == -1)
 					request.content_length = 0;
@@ -461,8 +468,7 @@ void Socket_client::process_headers()
 		else if (key == "content-length")
 		{
 			/* Content-length duplicate */
-			if (request.content_length != -1 && 
-				request.method != "GET") 
+			if (request.content_length != -1) 
 			{
 				_update_stat(ROUTE | ERROR, 400);
 				return;
@@ -515,48 +521,52 @@ bool Socket_client::get_ckunked_body() {
 	size_t pos_delim = 0;
 	size_t cursor = 0;
 	ssize_t size_chunck = -1;
-	while (size_chunck != 0) {
+	bool end = false;
+	while (!end) {
 		if ((pos_delim = buffer_recv.find(request.delim, cursor)) == std::string::npos) 
 			break;
-		// taille
 		size_chunck = _hexstr_to_ssize(buffer_recv.substr(cursor, pos_delim));
 		if (size_chunck < 0)
 			throw std::logic_error("error chunked : hexa size");
 		if (pos_delim + request.delim.size() + size_chunck + request.delim.size() > buffer_recv.size())
 			break;
-		#ifdef DEBUG1
-		std::cout << "-> " << size_chunck << "\n";
-		#endif
 		cursor = pos_delim + request.delim.size();
 		request.body.append(buffer_recv.substr(cursor, size_chunck));
-		#ifdef DEBUG1
-		std::cout << " {" <<  buffer_recv.substr(cursor, size_chunck) << "}\n";
-		#endif
 		cursor += size_chunck;
 		if (buffer_recv.compare(cursor, request.delim.size(), request.delim) != 0)
 			throw std::logic_error("error chunked : delimiter expected");
 		cursor += request.delim.size();
 		length += size_chunck;
+		if (size_chunck == 0 && buffer_recv.compare(cursor, request.delim.size(), request.delim))
+			end = true;
 	}
 	buffer_recv.erase(0, cursor);
 	request.content_length += length;
-	return (size_chunck == 0);
+	return (end);
 }
 
 
 void Socket_client::process_body() {
-	if (!(request.method == "POST" || request.method == "PUT")) {
-		state = RESPONSE;
-		return;
-	}
 	if (!request.chunked) {
 		if (get_simple_body()) {
+			if (!(state & ERROR) && request.content_length > _stol(route.max_body_size)) {
+				_update_stat(RESPONSE | ERROR, 413);
+				return;
+			}	
 			state = RESPONSE;
+			if (request.method == "GET" || request.method == "HEAD")
+				request.body.clear();
 			return;
 		}
 	} else {
 		try {
 			if (get_ckunked_body()) {
+				if (!(state & ERROR) && request.content_length > _stol(route.max_body_size)) {
+								_update_stat(RESPONSE | ERROR, 413);
+								return;
+				}	
+				if (request.method == "GET" || request.method == "HEAD")
+					request.body.clear();
 				state =  RESPONSE;
 				return ;
 			}
@@ -567,14 +577,15 @@ void Socket_client::process_body() {
 			std::cout << "rest : {" << buffer_recv << "}\n" ;
 			std::cout << e.what() << "\n";
 			#endif
-			_update_stat(RESPONSE | ERROR, 400);
+			if (request.method == "GET" || request.method == "HEAD") {
+				request.body.clear();
+				state =  RESPONSE;
+			}
+			else
+				_update_stat(RESPONSE | ERROR, 400);
 			return ;
 		}
 	}
-	if (!response.status && request.content_length > _stol(route.max_body_size)) {
-		_update_stat(RESPONSE | ERROR, 413);
-		return;
-	}	
 	state = BODY;
 }
 
@@ -593,10 +604,6 @@ void Socket_client::prepare_response() {
 		server = socket_server->servers[0]; 
 		route = server->choose_route(request.uri);
 	}
-#ifdef DEBUG1
-	route.what();
-	server->what();
-#endif
 	
 	if (closed) {
 		state = RESPONSE;
@@ -613,6 +620,8 @@ void Socket_client::_set_error(short code)
 		state = READY;
 		response.read_end = true;
 		response.content_length = response.body.size();
+		if (request.method == "HEAD")
+			response.body.clear();
 		response.content_type = "text/html";
 		response.status = code;
 		action = ACTION_NORMAL;
@@ -670,7 +679,6 @@ void Socket_client::process_body_response()
 {
 	std::string size_str;
 	size_t	size_chunked;
-	const int SIZE_CH = 8184;
 
 	if (response.chunked) {
 		while(!response.body.empty()) {
@@ -704,17 +712,15 @@ void Socket_client::process_header_generic()
 	buffer_send.append("HTTP/1.1 " + to_string(response.status) +
 			+ " " + status_msgs[response.status] + CRLF);
 	/* common headers */
-	buffer_send.append(std::string("Connection: ") +
-			(closed ? "closed" : "keep-alive") + CRLF);
-	buffer_send.append(std::string("Content-Type: ") +
-			response.content_type + CRLF);
 	buffer_send.append(std::string("Server: ") +
-			"webserv/v0.1" + CRLF);
+			WEBSERV_V + CRLF);
 	if (gettimeofday(&now, NULL) == -1)
 		throw std::runtime_error(strerror(errno));
 	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
 		throw std::runtime_error("strftime");
 	buffer_send.append(std::string("Date: ") + buf + CRLF);
+	buffer_send.append(std::string("Content-Type: ") +
+			response.content_type + CRLF);
 	if (response.chunked)
 		buffer_send.append(std::string("Transfer-Encoding:") +
 				"chunked" + CRLF);
@@ -724,6 +730,8 @@ void Socket_client::process_header_generic()
 	if (action == ACTION_RETURN)
 		buffer_send.append(std::string("Location: ") +
 				response.location + CRLF);
+	buffer_send.append(std::string("Connection: ") +
+			(closed ? "closed" : "keep-alive") + CRLF);
 	/* custom headers */
 	for (std::map<std::string, std::string>::iterator it =
 		response.headers.begin(); it != response.headers.end(); it++)
@@ -809,8 +817,9 @@ void Socket_client::process_header_CGI()
 	{
 		/* error_page does not apply to CGI response so 
 		 * we mustn't go throw process_response */
-		state |= ERROR;
-		return _set_error(502);
+		action = ACTION_NORMAL;
+		_update_stat(RESPONSE | ERROR, 502);
+		throw std::exception();
 	}
 	else 
 		_extract_cgi_headers(cgi_headers, delim, response, found);
@@ -819,8 +828,9 @@ void Socket_client::process_header_CGI()
 	{
 		/* error_page does not apply to CGI response so 
 		 * we mustn't go throw process_response */
-		state |= ERROR;
-		return _set_error(502);
+		action = ACTION_NORMAL;
+		_update_stat(RESPONSE | ERROR, 502);
+		throw std::exception();
 	}
 	/* make a valid HTTP response from CGI output */
 	_populate_headers_CGI(cgi_headers);
@@ -828,11 +838,17 @@ void Socket_client::process_header_CGI()
 	for (std::map<std::string, std::string>::iterator it = cgi_headers.begin();
 		it != cgi_headers.end(); it++)
 		buffer_send.append(it->first + ": " + it->second + CRLF);
-	buffer_send.append(std::string("Server: ") + "webserv/v0.1" + CRLF);
-	if (gettimeofday(&now, NULL) == -1)
-		throw std::runtime_error(strerror(errno));
-	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec)))
-		throw std::runtime_error("strftime");
+	buffer_send.append(std::string("Server: ") + WEBSERV_V + CRLF);
+	if (gettimeofday(&now, NULL) == -1) {
+		action = ACTION_NORMAL;
+		_update_stat(RESPONSE | ERROR, 500);
+		throw std::exception();
+	}
+	if (!strftime(buf, 100, "%a, %d %b %y %T GMT", gmtime(&now.tv_sec))) {
+		action = ACTION_NORMAL;
+		_update_stat(RESPONSE | ERROR, 500);
+		throw std::exception();
+	}
 	buffer_send.append(std::string("Date: ") + buf + CRLF);
 	buffer_send.append(std::string("Connection: ") +
 			(closed ? "closed" : "keep-alive") + CRLF + CRLF);
@@ -841,18 +857,14 @@ void Socket_client::process_header_CGI()
 
 void Socket_client::process_header_response()
 {
-	try
-	{
-		if (action != ACTION_CGI)
-			process_header_generic();
-		else 
-			process_header_CGI();
-	}
-	catch (...) 
-	{ 
-		state |= ERROR;
-		return _set_error(500); 
-	}
+	if (action != ACTION_CGI)
+		process_header_generic();
+	else 
+		process_header_CGI();
+#ifdef LOG
+	std::cout << "\""<< buffer_send.substr(0,buffer_send.find(CRLF)) 
+		<< "\" [" << addr << ":" << port << "]\n"; 
+#endif
 }
 
 void Socket_client::fetch_response()
@@ -867,9 +879,8 @@ void Socket_client::_process_cgi() {
 		_setup_cgi();
 		_exec_cgi(); 
 	}
-	catch (...) 
+	catch (std::exception & e) 
 	{
-		state |= ERROR;
 		return _set_error(500);
 	}
 	state |= NEED_WRITE;
@@ -880,15 +891,20 @@ void Socket_client::_process_return()
 {
 	response.status = to_number<short>(route.return_.first);
 	response.location = route.return_.second;
+	response.body = default_pages[response.status];
+	response.content_length = response.body.size();
+	response.content_type = "text/html";
+	response.read_end = true;
 	state = READY;
+	response.read_end = true;
 }
 
 void Socket_client::_process_upload()
 {
-	std::string file = route.upload;
+	std::string file = route.upload + "/";
 	std::string tmp_filename = request.uri.substr(route.location.size(), request.uri.size());
 	file += tmp_filename;
-	
+
 	if (_is_dir(file.c_str()))
 		return _set_error(409);
 	if (!_is_dir(route.upload.c_str())) 
@@ -911,6 +927,8 @@ void Socket_client::_process_upload()
 		response.status = 201; 
 		return ;
 	}
+	if (errno == ENOENT)
+		return _set_error(500);
 	_set_error(403);
 }
 
@@ -950,6 +968,7 @@ void Socket_client::_process_delete(std::string& path)
 		{
 			response.status = 204; // DELETE  OK but no more information to send
 			state = READY;
+			response.read_end = true;
 			return ;
 		}
 	}
@@ -957,6 +976,7 @@ void Socket_client::_process_delete(std::string& path)
 	{
 		response.status = 204; // DELETE  OK but no more information to send
 		state = READY;
+		response.read_end = true;
 		return ;
 	}
 	return _set_error(404);
@@ -977,6 +997,9 @@ int Socket_client::_test_all_index(std::string& path)
 
 int Socket_client::_open_file_fill_response(std::string& path)
 {
+	struct stat now;
+	char		buf[100];
+
 	if ((fd_read = open(path.c_str(), O_RDONLY | O_NONBLOCK)) != -1)
 	{
 		if (!(state & ERROR))
@@ -985,8 +1008,31 @@ int Socket_client::_open_file_fill_response(std::string& path)
 		response.content_type = _get_file_mime(path);
 		if (request.method.compare("GET") == 0)
 			state |= NEED_READ;
-		else
+		else {
 			state = READY;
+			response.read_end = true;
+		}
+		if (!fstat(fd_read, &now))
+		{
+			if (strftime(buf, 100, "%a, %d %b %y %T GMT",
+						gmtime(&now.st_mtimespec.tv_sec)))
+			{
+				long				lm = now.st_mtimespec.tv_sec;
+				std::stringstream	ss;
+				std::string			last_modified;
+				std::string			content_length;
+
+				ss << std::hex << lm;
+				last_modified = ss.str();
+				/* empty the string stream */
+				ss.str(std::string());
+				ss << std::hex << response.content_length;
+				content_length = ss.str();
+				response.headers["Last-Modified"] = buf;
+				response.headers["ETag"] = "\"" + last_modified + 
+								"T-" + content_length + "O\"";
+			}
+		}
 		return 1;
 	}	
 	return 0;
@@ -1000,12 +1046,14 @@ void Socket_client::_process_get_head(std::string& path)
 			if (_test_all_index(path))
 				return ;
 		if (errno == EACCES)
-			return _set_error(403);
+			return _set_error(500);
 		if (route.autoindex.compare("on") == 0) {
 			try { generate_directory_listing(); }
-			catch (...) { _set_error(500); }
+			catch (std::exception & e) { _set_error(500); }
 			return ;
 		}
+		if (!route.index.empty())
+			return _set_error(404);
 		return _set_error(403);
 	}
 	else
@@ -1013,7 +1061,7 @@ void Socket_client::_process_get_head(std::string& path)
 		if (_open_file_fill_response(path))
 			return ;
 		if (errno == EACCES)
-			return _set_error(403);
+			return _set_error(500);
 		return _set_error(404);
 	}
 }
@@ -1022,16 +1070,18 @@ std::string Socket_client::_process_build_path()
 {
 	std::string path = request.uri;
 
+	// uri without / but location with /
+	if (route.location.size() > request.uri.size())
+			path.push_back('/');
 	if (!route.root.first.empty())
 	{
 		if (route.root.second)
-		{
-			size_t pos = path.find(route.location);
-			if (pos != std::string::npos)
-				path.erase(pos, route.location.length());
-		}
-		path.insert(0, route.root.first);
+			path = path.substr(route.location.size(), request.uri.size());		
+		path.insert(0, route.root.first + "/");
 	}
+	if (action != ACTION_CGI && _is_dir(path.c_str()) && *(path.end() - 1) != '/')
+			path.push_back('/');
+	server->_delete_duplicate_slash(path);
 	return path;
 }
 

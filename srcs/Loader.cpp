@@ -2,19 +2,21 @@
 
 Loader::Loader(std::ifstream& config) : _config_file(config)
 {
+#ifdef DEBUG 
 	std::cout << "Loader start" << std::endl;
+#endif
 }
 
 Loader::~Loader(void)
 {
+#ifdef DEBUG 
 	std::cout << "Loader destruction" << std::endl;
+#endif
 }
 
 void	Loader::add_servers(std::vector<Server> & servers)
 {
 	_parse_config(servers);
-	for (std::vector<Server>::const_iterator it = servers.begin(); it != servers.end(); ++it)
-		it->what();
 }
 
 void	Loader::_fill_config_tab(void)
@@ -152,5 +154,5 @@ void	Loader::what(void) const
 	std::string tmp;
 
 	std::cout << "Loader content : " << std::endl;
-	for_each(_config_tab.begin(), _config_tab.end(), std::bind1st(std::mem_fun(&Loader::_print_config), this));	
+	for_each(_config_tab.begin(), _config_tab.end(), std::bind1st(std::mem_fun(&Loader::_print_config), this));
 }

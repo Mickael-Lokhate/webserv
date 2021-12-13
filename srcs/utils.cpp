@@ -157,3 +157,14 @@ std::string _get_file_mime(std::string const & tmp_path) {
 		ext = "text/plain";
 	return ext; 
 }
+
+void _clean_fd_table(void)
+{
+	size_t			maxfd = 256;
+	struct rlimit	rlim;
+
+	if (getrlimit(RLIMIT_NOFILE, &rlim))
+		maxfd = rlim.rlim_cur;
+	for (size_t i = 3; i < maxfd; i++)
+		close(i);
+}

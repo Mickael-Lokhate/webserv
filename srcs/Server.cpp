@@ -6,7 +6,7 @@
 
 Server::Server() 
 {
-	address = "127.0.0.1";
+	address = "0.0.0.0";
 	server_name.push_back("localhost");
 	port = "8080";
 	Route newroute;
