@@ -314,7 +314,7 @@ void Socket_client::_update_stat(int _state, short _status)
 		std::cout << "\""<< buffer_recv.substr(0,buffer_recv.find(request.delim)) 
 			<< "\" [" << addr << ":" << port << "]\n"; 
 #endif
-	static short closed_status[] = {400, 501, 415, 505, 413, 414, 431, 500};
+	static short closed_status[] = {400, 501, 415, 505, 413, 414, 431, 500, 504};
 	static const int size = (sizeof(closed_status)/sizeof(short));
 	response.status = _status;
 	state = _state;

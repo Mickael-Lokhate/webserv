@@ -167,6 +167,18 @@ void Worker::del_client(int i)
 	/* Delete timeout if it was not triggered */
 	if (_event_list[i].filter != EVFILT_TIMER)
 		update_modif_list(client.fd, EVFILT_TIMER, EV_DELETE);
+	/* */
+	else if (client.action == ACTION_CGI && !client.response.head_send)
+	{
+		if (client.cgi.pid != -1)
+		{
+			kill(client.cgi.pid, SIGKILL);
+			client.action = ACTION_NORMAL;
+			client._update_stat(RESPONSE | ERROR, 504);
+			process_client(client.fd);
+			return ;
+		}
+	}
 	close(client.fd_read);
 	close(client.fd_write);
 	close(client.fd);
@@ -214,6 +226,7 @@ void Worker::read_client(int i)
 		close(client.fd_read);
 		client.fd_read = -1;
 		waitpid(client.cgi.pid, &client.cgi.exit_code, WNOHANG);	
+		client.cgi.pid = -1;
 		client.response.read_end = true;
 		client.state = READY;
 		try {
@@ -256,6 +269,7 @@ void Worker::write_client(int i)
 	{
 		if (waitpid(client.cgi.pid, &client.cgi.exit_code, WNOHANG) == client.cgi.pid)
 		{
+			client.cgi.pid = -1;
 			close(client.fd_write);
 			close(client.fd_read);
 			client.fd_read = -1;

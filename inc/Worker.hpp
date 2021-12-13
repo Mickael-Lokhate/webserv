@@ -13,6 +13,7 @@
 #include <algorithm>
 #include "Socket_server.hpp"
 #include "Socket_client.hpp"
+#include <signal.h>
 
 class Worker {
 
