@@ -23,7 +23,6 @@ class Worker {
 	Worker(const Worker & ref);
 	~Worker(void);
 	Worker & operator=(const Worker & right);
-	Socket_client & retrieve_client(long i);
 
 	void event_loop(void);
 
@@ -35,15 +34,15 @@ class Worker {
 				intptr_t data = 0, void *udata = 0);
 
 	void	new_client(int i);
-	void	del_client(int i);
+	void	del_client(int i, Socket_client * client_ptr);
 
-	void	recv_client(int i);
-	void	send_client(int i);
+	void	recv_client(int i, Socket_client * client_ptr);
+	void	send_client(int i, Socket_client * client_ptr);
 
-	void	process_client(int i);
-	void	read_client(int i);
-	void	write_client(int i);
-	bool 	ignore_event(int i);
+	void	process_client(Socket_client & client);
+	void	read_client(int i, Socket_client * client_ptr);
+	void	write_client(int i, Socket_client * client_ptr);
+	Socket_client * get_client(int i);
 
 	void	abort_write(Socket_client & client);
 	

@@ -4,14 +4,6 @@
 template<class T>
 void gwhat(T & obj) { obj.what(); }
 
-Socket_client & Worker::retrieve_client(long i)
-{
-	std::map<int, Socket_client>::iterator it = _socket_clients.find(i);
-	if (it == _socket_clients.end())
-		throw std::runtime_error("invalid client");
-	return it->second;
-}
-
 Worker::Worker(const std::map<int, Socket_server> & socket_servers) :
 	_socket_servers(socket_servers)
 {
@@ -97,10 +89,10 @@ void Worker::new_client(int i)
 	}
 }
 
-void Worker::recv_client(int i)
+void Worker::recv_client(int i, Socket_client * client_ptr)
 {
 	char	buffer[_event_list[i].data];
-	Socket_client & client = retrieve_client(_event_list[i].ident);
+	Socket_client & client = *client_ptr;
 #ifdef DEBUG
 	std::cout << "[Worker] -  recv client -> ";
 	client.what();
@@ -109,20 +101,20 @@ void Worker::recv_client(int i)
 #endif 
 	if (read(client.fd, buffer, _event_list[i].data) == -1)
 	{
-		del_client(i);
+		del_client(i, &client);
 		throw std::runtime_error(std::string(strerror(errno)));
 	}
 	client.buffer_recv.append(buffer, _event_list[i].data);
 	/* After receiving data, we register a user event to wakeup process_client */
 	if (!(client.state & RESPONSE) && !(client.state & READY))
-		process_client(client.fd);
+		process_client(client);
 }
 
 
-void Worker::send_client(int i)
+void Worker::send_client(int i, Socket_client * client_ptr)
 {
 	ssize_t			size_send;
-	Socket_client & client = retrieve_client(_event_list[i].ident);
+	Socket_client & client = *client_ptr;
 #ifdef DEBUG
 	std::cout << "[Worker] -  send client -> ";
 	client.what();
@@ -134,7 +126,7 @@ void Worker::send_client(int i)
 	size_send = write(client.fd, client.buffer_send.c_str(), size_send);
 	if (size_send == -1)
 	{
-		del_client(i);
+		del_client(i, &client);
 		throw std::runtime_error(std::string(strerror(errno)));
 	}
 	update_modif_list(client.fd, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_SEND);
@@ -142,21 +134,21 @@ void Worker::send_client(int i)
 	if (client.buffer_send.empty() && client.response.read_end)
 	{
 		if (client.closed)
-			del_client(i);
+			del_client(i, &client);
 		else {
 			update_modif_list(client.fd, EVFILT_WRITE, EV_DELETE | EV_CLEAR);
 			client.clean();
 			/* Setup client's timeout for sending back data */
 			update_modif_list(client.fd, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TO_HEADERS);
 			if (!client.buffer_recv.empty()) 
-				process_client(client.fd);
+				process_client(client);
 		}
 	}
 }
 
-void Worker::del_client(int i)
+void Worker::del_client(int i, Socket_client * client_ptr)
 {
-	Socket_client & client = retrieve_client(_event_list[i].ident);
+	Socket_client & client = *client_ptr;
 #ifdef DEBUG
 	std::cout << "[Worker] -   " << 
 	((_event_list[i].filter == EVFILT_TIMER) ? "TO" : "del") 
@@ -175,7 +167,7 @@ void Worker::del_client(int i)
 			kill(client.cgi.pid, SIGKILL);
 			client.action = ACTION_NORMAL;
 			client._update_stat(RESPONSE | ERROR, 504);
-			process_client(client.fd);
+			process_client(client);
 			return ;
 		}
 	}
@@ -186,9 +178,9 @@ void Worker::del_client(int i)
 	_socket_clients.erase(client.fd);
 }
 
-void Worker::read_client(int i)
+void Worker::read_client(int i, Socket_client * client_ptr)
 {
-	Socket_client & client = retrieve_client((long)_event_list[i].udata);
+	Socket_client & client = *client_ptr;
 #ifdef DEBUG
 	std::cout << "[Worker] -   Read client -> ";
 	client.what();
@@ -205,7 +197,7 @@ void Worker::read_client(int i)
 		client._update_stat(RESPONSE | ERROR, 500);
 		close(client.fd_read);
 		client.fd_read = -1;
-		process_client(client.fd);
+		process_client(client);
 		return ;	
 	}
 	client.response.body.append(buffer, size_read);
@@ -217,7 +209,7 @@ void Worker::read_client(int i)
 			client.fd_read = -1;
 			client.response.read_end = true;
 			client.state = READY;
-			process_client(client.fd);
+			process_client(client);
 			return ;
 		}
 	}
@@ -230,16 +222,16 @@ void Worker::read_client(int i)
 		client.response.read_end = true;
 		client.state = READY;
 		try {
-			process_client(client.fd);
+			process_client(client);
 		} catch (std::exception & e) {
-			process_client(client.fd);
+			process_client(client);
 		}
 		return ;
 	}
 	if (size_read == NB_READ)
 	{
 		client.state = READY;
-		process_client(client.fd);
+		process_client(client);
 	}
 }
 
@@ -251,13 +243,13 @@ void Worker::abort_write(Socket_client & client)
 	client.fd_write = -1;
 	client.action = ACTION_NORMAL;
 	client._update_stat(RESPONSE | ERROR, 502);
-	process_client(client.fd);
+	process_client(client);
 }
 
 // upload 
-void Worker::write_client(int i)
+void Worker::write_client(int i, Socket_client * client_ptr)
 {
-	Socket_client & client = retrieve_client((long)_event_list[i].udata);
+	Socket_client & client = *client_ptr;
 	ssize_t			size_write = client.request.body.size();
 #ifdef DEBUG
 	std::cout << "[Worker] -   Write client -> ";
@@ -286,7 +278,7 @@ void Worker::write_client(int i)
 		client.fd_write = -1;
 		if (client.action != ACTION_CGI) {
 			client._update_stat(RESPONSE | ERROR, 500);
-			process_client(client.fd);
+			process_client(client);
 		}
 		return;
 	}
@@ -303,14 +295,13 @@ void Worker::write_client(int i)
 		if (client.action != ACTION_CGI) {
 			client.state = READY;
 			client.response.read_end = true;
-			process_client(client.fd);
+			process_client(client);
 		}
 	}
 }
 
-void Worker::process_client(int fd_client)
+void Worker::process_client(Socket_client & client)
 {
-	Socket_client & client = retrieve_client(fd_client);
 	#ifdef DEBUG
 		std::cout << "[Worker] -   process client -> ";
 		client.what();
@@ -354,21 +345,28 @@ void Worker::process_client(int fd_client)
 	}
 }
 
-bool Worker::ignore_event(int i)
+Socket_client * Worker::get_client(int i)
 {
+	std::map<int, Socket_client>::iterator it;
+
 	if (_closed_clients.find(_event_list[i].ident) != _closed_clients.end())
-	   return true;	
-	if(_event_list[i].udata && _socket_clients.find((long)_event_list[i].udata) == _socket_clients.end())
-		return true;
-	if(!(_event_list[i].udata) &&  _socket_clients.find(_event_list[i].ident) == _socket_clients.end())
-		return true;
-	return false;
+	   return NULL;	
+
+	if (_event_list[i].udata) {
+		if ((it = _socket_clients.find((long)_event_list[i].udata)) == _socket_clients.end())	
+			return NULL;
+	}
+	else if ((it = _socket_clients.find (_event_list[i].ident)) == _socket_clients.end())
+			return NULL;
+
+	return &(it->second);
 }
 
 void Worker::event_loop(void)
 {
 	int					kq;
 	std::map<int, Socket_server>::iterator last = _socket_servers.end();
+	Socket_client * client_ptr;
 
 	signal(SIGPIPE, SIG_IGN);
 	if ((kq = kqueue()) == -1)
@@ -392,26 +390,26 @@ void Worker::event_loop(void)
 					new_client(i);
 				else
 				{
-					if (ignore_event(i))
+					if (!(client_ptr = get_client(i)))
 						continue ;
 					else if  (!(_event_list[i].udata) && 
 							(_event_list[i].flags & EV_EOF || _event_list[i].filter == EVFILT_TIMER))
-						del_client(i);
+						del_client(i, client_ptr);
 					else
 					{
 						if (_event_list[i].filter == EVFILT_READ)
 						{
 							if (_event_list[i].udata)
-								read_client(i);
+								read_client(i, client_ptr);
 							else
-								recv_client(i);
+								recv_client(i, client_ptr);
 						}
 						else if (_event_list[i].filter == EVFILT_WRITE)
 						{
 							if (_event_list[i].udata)
-								write_client(i);
+								write_client(i, client_ptr);
 							else
-								send_client(i);
+								send_client(i, client_ptr);
 						}
 					}
 				}
