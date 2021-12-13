@@ -2,19 +2,21 @@
 
 Loader::Loader(std::ifstream& config) : _config_file(config)
 {
+#ifdef DEBUG 
 	std::cout << "Loader start" << std::endl;
+#endif
 }
 
 Loader::~Loader(void)
 {
+#ifdef DEBUG 
 	std::cout << "Loader destruction" << std::endl;
+#endif
 }
 
 void	Loader::add_servers(std::vector<Server> & servers)
 {
 	_parse_config(servers);
-	for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
-		it->what();
 }
 
 void	Loader::_fill_config_tab(void)
@@ -109,6 +111,13 @@ void	Loader::_create_route(Server & server, Route &default_route, t_vector_itera
 			else
 				SYNTAX_ERROR(line->second, line->first);
 		}
+		if (new_route.ext.size() && !new_route.cgi.size())
+		{
+			std::string tmp_error = "Configuration error at line ";
+			tmp_error +=  to_string(line->second); 
+			tmp_error +=  " no CGI script in an extension location";
+			throw std::runtime_error(tmp_error);
+		}
 		server.add_route(new_route);
 		_create_route(server, new_route, new_loc_vec);
 	}
@@ -145,5 +154,5 @@ void	Loader::what(void) const
 	std::string tmp;
 
 	std::cout << "Loader content : " << std::endl;
-	for_each(_config_tab.begin(), _config_tab.end(), std::bind1st(std::mem_fun(&Loader::_print_config), this));	
+	for_each(_config_tab.begin(), _config_tab.end(), std::bind1st(std::mem_fun(&Loader::_print_config), this));
 }

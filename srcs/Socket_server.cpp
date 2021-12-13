@@ -6,7 +6,7 @@ Socket_server::Socket_server(std::string const & address, std::string const & po
 void Socket_server::listen_() {
 	int ret = listen(this->fd, this->BACKLOG);
 	if (ret == -1)
-		throw STRDEBUG0;
+		throw std::runtime_error(strerror(errno));
 }
 
 void Socket_server::bind_() {
@@ -15,15 +15,16 @@ void Socket_server::bind_() {
 	int ret = 0;
 	this->fd = socket(PF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
-		throw STRDEBUG0;
+		throw std::runtime_error(strerror(errno));
 
 	// socket options
     ret = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (int[]){1}, 4);
 	if (ret == -1)
-		throw std::string(STRDEBUG0);
+		throw std::runtime_error(strerror(errno));
+
 	ret = fcntl(this->fd, F_SETFL, O_NONBLOCK);
 	if (ret == -1)
-		throw STRDEBUG0;
+		throw std::runtime_error(strerror(errno));
 
 	// bind
 	struct sockaddr_in address;
@@ -33,14 +34,19 @@ void Socket_server::bind_() {
 	inet_pton(AF_INET, this->address.c_str(), &(address.sin_addr));
 
 	ret = bind(this->fd, (struct sockaddr *)&address, sizeof(address));
-	if (ret == -1) {
-		throw STRDEBUG0;
-	}
+	if (ret == -1) 
+		throw std::runtime_error(strerror(errno));
 }
 
-void Socket_server::what() {
+void Socket_server::what() const {
 	std::cout << "+ Socket_server : " << "\n";
 	std::cout << "- fd: " << this->fd << "\n";
 	std::cout << "- address: " << this->address << "\n";
 	std::cout << "- port: " << this->port << "\n";
+}
+
+void Socket_server::big_what() const {
+	what();
+	for (std::vector<Server *>::const_iterator it = servers.begin(); it !=servers.end(); it++)
+		(*it)->what();
 }

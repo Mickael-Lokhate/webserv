@@ -25,4 +25,5 @@ add_header  REMOTE_PORT        $remote_port always;
 add_header  SERVER_ADDR        $server_addr always;
 add_header  SERVER_PORT        $server_port always;
 add_header  SERVER_NAME        $server_name always;
+add_header  HTTP_COOKIE        $http_cookie always;
 

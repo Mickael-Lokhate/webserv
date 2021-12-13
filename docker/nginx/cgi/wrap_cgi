@@ -1,3 +1,4 @@
-#!/usr/bin/env bash
-cat > out
-cat out | ./ubuntu_cgi_tester
+#!/bin/bash
+echo "sdsdd"
+echo ""
+env

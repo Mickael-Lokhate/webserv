@@ -77,6 +77,8 @@ void	Loader::_treat_server_name(t_vector_string split_line, unsigned int line, S
 
 void	Loader::_treat_root(t_vector_string split_line, unsigned int line, Route &default_route)
 {
+	if (default_route.is_root_set)
+		SYNTAX_ERROR(line, split_line.at(0));
 	if (split_line.size() < 2 || split_line.size() > 3)
 		SYNTAX_ERROR(line, split_line.at(0));
 	if (split_line.size() == 2 && split_line.at(1).compare("alias") == 0)
@@ -89,6 +91,7 @@ void	Loader::_treat_root(t_vector_string split_line, unsigned int line, Route &d
 		else
 			SYNTAX_ERROR(line, split_line.at(0));
 	}
+	default_route.is_root_set = true;
 }
 void	Loader::_treat_autoindex(t_vector_string split_line, unsigned int line, Route &default_route)
 {
@@ -110,20 +113,14 @@ void	Loader::_treat_max_body_size(t_vector_string split_line, unsigned int line,
 
 void	Loader::_treat_return(t_vector_string split_line, unsigned int line, Route &default_route)
 {
-	if (split_line.size() < 2 || split_line.size() > 3)
+	if (split_line.size() != 3)
 		SYNTAX_ERROR(line, split_line.at(0));
-	if (split_line.size() == 2)
-	{
-		default_route.return_.first = "";
-		default_route.return_.second = split_line.at(1);
-	}
-	else
-	{
-		if (!is_number(split_line.at(1)))
-			SYNTAX_ERROR(line, split_line.at(0));
-		default_route.return_.first = split_line.at(1);
-		default_route.return_.second = split_line.at(2);
-	}
+	if (!is_number(split_line.at(1)) || (to_number<int>(split_line.at(1)) < 300 || to_number<int>(split_line.at(1)) > 399))
+		SYNTAX_ERROR(line, split_line.at(0));
+	if (split_line.at(2)[0] != '/')
+		SYNTAX_ERROR(line, split_line.at(0));
+	default_route.return_.first = split_line.at(1);
+	default_route.return_.second = split_line.at(2);
 }
 
 void	Loader::_treat_index(t_vector_string split_line, unsigned int line, Route &default_route)
@@ -190,9 +187,13 @@ void	Loader::_treat_error_page(t_vector_string split_line, unsigned int line, Ro
 {
 	if (split_line.size() < 3)
 		SYNTAX_ERROR(line, split_line.at(0));
+	if (split_line.at(split_line.size() - 1)[0] != '/')
+		SYNTAX_ERROR(line, split_line.at(0));
 	for (size_t i = 1; i < split_line.size() - 1; ++i)
 	{
-		if (!is_number(split_line.at(i)))
+		if (!is_number(split_line.at(i)) || (to_number<int>(split_line.at(i)) < 400 || to_number<int>(split_line.at(i)) > 599))
+			SYNTAX_ERROR(line, split_line.at(0));
+		if ((default_route.error_page.find(split_line.at(i))) != default_route.error_page.end())
 			SYNTAX_ERROR(line, split_line.at(0));
 		default_route.error_page.insert(std::make_pair(split_line.at(i), split_line.at(split_line.size() - 1)));
 	}
@@ -220,6 +221,8 @@ void	Loader::_get_location_name(t_vector_string  &split_line, unsigned int line,
 		SYNTAX_ERROR(line, split_line.at(0));
 	if (split_line.size() == 3 && (split_line.at(2).compare("{") != 0))
 		SYNTAX_ERROR(line, split_line.at(0));
+	if (split_line.at(1)[0] != '/' && split_line.at(1)[0] != '.')
+		SYNTAX_ERROR(line, split_line.at(0));
 	if (split_line.at(1).find(".") != std::string::npos)
 	{
 		split_line = split(split_line.at(1), '.');
@@ -237,4 +240,5 @@ void	Loader::_get_location_name(t_vector_string  &split_line, unsigned int line,
 	}
 	else
 		default_route.location = split_line.at(1);
+	default_route.is_root_set = false;
 }

@@ -19,12 +19,11 @@ public:
 	std::vector<std::string> index;
 	std::string cgi;
 	std::string upload;
+	bool		is_root_set;
 
 public:
 	Route();
 	~Route();
-	void what();
+	void what() const;
 
-private:
-	void init_error_page(void);
 };
